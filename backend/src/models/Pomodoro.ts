@@ -7,6 +7,5 @@ export const pomodoro = sqliteTable('pomodoro',{
     shortBreak: integer("short_break"),
     longBreak: integer("long_break"),
     cicle: integer("cicle"),
-    description: text("description"), //creo que tenemos que borrar
     subjectId: integer("subject_id").notNull().references(() => subject.subjectId)
 })

@@ -6,5 +6,6 @@ export const schedule = sqliteTable('schedule',{
     startTime: text("start_time"),
     endTime: text("end_time"),
     date: text("password"),
+    status: integer("status").$type<0|1>().notNull().default(1),
     subjectId: integer("subject_id").notNull().references( () => subject.subjectId)
 })
