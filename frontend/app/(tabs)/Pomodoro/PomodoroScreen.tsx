@@ -1,22 +1,26 @@
 import { SafeAreaView, View, Text, StyleSheet, Pressable } from "react-native";
 import { useState, useMemo } from "react";
 
-type PomodoroSessionState = "idle" | "running";
-
-const STATES: Record<PomodoroSessionState, {
+type PomodoroSessionState = "idle" | "running" | "finished";
+type PomodoroVisualState = {
   background: string;
-  buttonLabel: string;
-  buttonColor: string;
-}> = {
+  primary: { label: string; color: string };
+  secondary?: { label: string; color: string };
+};
+
+const STATES: Record<PomodoroSessionState, PomodoroVisualState> = {
   idle: {
     background: "#e53935",
-    buttonLabel: "Iniciar Focus Time",
-    buttonColor: "#f06292",
+    primary: { label: "Iniciar Focus Time", color: "#f06292" },
   },
   running: {
     background: "#00695c",
-    buttonLabel: "Pausar",
-    buttonColor: "#26a69a",
+    primary: { label: "Pausar", color: "#26a69a" },
+  },
+  finished: {
+    background: "#1e88e5",
+    primary: { label: "Continuar", color: "#90caf9" },
+    secondary: { label: "Terminar", color: "#b0bec5" },
   },
 };
 
@@ -36,34 +40,63 @@ const TimerDisplayPlaceholder = ({
 export default function PomodoroSessionScreen() {
   const [status, setStatus] = useState<PomodoroSessionState>("idle");
 
-  const { background, buttonLabel, buttonColor } = useMemo(() => {
-    return STATES[status];
-  }, [status]);
-
+  const visualState = useMemo(() => STATES[status], [status]);
   const timeLabel = "25:00";
 
   const toggleSession = () => {
-    setStatus((prev) => (prev === "idle" ? "running" : "idle"));
+    setStatus((prev) => {
+      if (prev === "idle") return "running";
+      if (prev === "running") return "finished";
+      return "idle";
+    });
   };
 
+  const handleContinue = () => setStatus("running");
+  const handleFinish = () => setStatus("idle");
+
   return (
-    <SafeAreaView style={[styles.safe, { backgroundColor: background }] }>
-      <View style={[styles.container, { backgroundColor: background }]}>
+    <SafeAreaView style={[styles.safe, { backgroundColor: visualState.background }]}>
+      <View style={[styles.container, { backgroundColor: visualState.background }]}>
         <Text style={styles.title}>Pomodoro</Text>
 
         {/* Reloj del Pomodoro: aquí irá el componente final */}
         <TimerDisplayPlaceholder status={status} timeLabel={timeLabel} />
 
-        <Pressable
-          onPress={toggleSession}
-          style={({ pressed }) => [
-            styles.actionButton,
-            { backgroundColor: buttonColor },
-            pressed && { opacity: 0.85 },
-          ]}
-        >
-          <Text style={styles.actionButtonText}>{buttonLabel}</Text>
-        </Pressable>
+        {status !== "finished" ? (
+          <Pressable
+            onPress={toggleSession}
+            style={({ pressed }) => [
+              styles.actionButton,
+              { backgroundColor: visualState.primary.color },
+              pressed && { opacity: 0.85 },
+            ]}
+          >
+            <Text style={styles.actionButtonText}>{visualState.primary.label}</Text>
+          </Pressable>
+        ) : (
+          <View style={styles.finishedActions}>
+            <Pressable
+              onPress={handleContinue}
+              style={({ pressed }) => [
+                styles.finishedButton,
+                { backgroundColor: visualState.primary.color },
+                pressed && { opacity: 0.85 },
+              ]}
+            >
+              <Text style={styles.finishedButtonText}>{visualState.primary.label}</Text>
+            </Pressable>
+            <Pressable
+              onPress={handleFinish}
+              style={({ pressed }) => [
+                styles.finishedButton,
+                { backgroundColor: visualState.secondary?.color },
+                pressed && { opacity: 0.85 },
+              ]}
+            >
+              <Text style={styles.finishedButtonText}>{visualState.secondary?.label}</Text>
+            </Pressable>
+          </View>
+        )}
       </View>
     </SafeAreaView>
   );
@@ -106,6 +139,20 @@ const styles = StyleSheet.create({
   actionButtonText: {
     color: "#ffffff",
     fontSize: 16,
+    fontWeight: "600",
+  },
+  finishedActions: {
+    flexDirection: "row",
+    columnGap: 12,
+  },
+  finishedButton: {
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    borderRadius: 20,
+  },
+  finishedButtonText: {
+    color: "#0a0a0a",
+    fontSize: 15,
     fontWeight: "600",
   },
 });
