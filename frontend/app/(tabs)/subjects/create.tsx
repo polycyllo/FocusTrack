@@ -10,8 +10,15 @@ import {
   ScrollView,
 } from "react-native";
 import { useRouter } from "expo-router";
-import DateTimePicker, { DateTimePickerEvent } from "@react-native-community/datetimepicker";
+import DateTimePicker, {
+  DateTimePickerEvent,
+} from "@react-native-community/datetimepicker";
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
+
+// === NUEVO: importar el store para guardar ===
+import { useSubjectsStore } from "@/src/store/subjects.store";
+import type { Subject } from "@/src/store/subjects.store";
+
 //nota: Buscar la manera de que cuando me equivoque al seleccionar la hora de un dia al
 //hacer clic otra vez sobre el dia reestablecer las hroas lo mismo para el nombre
 type DayIndex = 0 | 1 | 2 | 3 | 4 | 5 | 6;
@@ -53,7 +60,10 @@ const ICON_OPTIONS = [
   { key: "book", node: <Ionicons name="book" size={22} /> },
   { key: "calculator", node: <Ionicons name="calculator" size={22} /> },
   { key: "flask", node: <Ionicons name="flask" size={22} /> },
-  { key: "code-tags", node: <MaterialCommunityIcons name="code-tags" size={22} /> },
+  {
+    key: "code-tags",
+    node: <MaterialCommunityIcons name="code-tags" size={22} />,
+  },
 ];
 
 type TimeKind = "start" | "end";
@@ -63,6 +73,9 @@ type PickerState =
 
 export default function SubjectCreateScreen() {
   const router = useRouter();
+
+  // === NUEVO: acción del store ===
+  const addSubject = useSubjectsStore((s) => s.addSubject);
 
   // form state
   const [name, setName] = useState("");
@@ -90,7 +103,7 @@ export default function SubjectCreateScreen() {
     [selectedDays]
   );
 
-  // handlers 
+  // handlers
   const toggleDay = (d: DayIndex) =>
     setSelectedDays((prev) => ({ ...prev, [d]: !prev[d] }));
 
@@ -110,16 +123,22 @@ export default function SubjectCreateScreen() {
   };
 
   const formatTime = (d?: Date) =>
-    d ? d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : "--:--";
+    d
+      ? d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
+      : "--:--";
 
   const validate = () => {
     if (!name.trim()) return "El nombre es obligatorio.";
     if (!anyDaySelected) return "Selecciona al menos un día.";
-    for (let di = 0 as DayIndex; di <= 6; di = ((di + 1) as DayIndex)) {
+    for (let di = 0 as DayIndex; di <= 6; di = (di + 1) as DayIndex) {
       if (selectedDays[di]) {
         const t = times[di];
         if (!t.start || !t.end) {
           return `Faltan horas para ${NICE_DAY[di]}.`;
+        }
+        // === NUEVO: fin > inicio ===
+        if (t.start && t.end && t.end <= t.start) {
+          return `La hora de fin debe ser mayor que la de inicio para ${NICE_DAY[di]}.`;
         }
       }
     }
@@ -133,7 +152,8 @@ export default function SubjectCreateScreen() {
       return;
     }
 
-    const payload = {
+    // base del payload igual a tu versión
+    const base = {
       name: name.trim(),
       color,
       icon,
@@ -144,28 +164,44 @@ export default function SubjectCreateScreen() {
           const t = times[di];
           return {
             day: di,
-            start: t.start?.toISOString(),
-            end: t.end?.toISOString(),
+            start: t.start?.toISOString()!, // validado arriba
+            end: t.end?.toISOString()!,
           };
         }),
     };
 
-    console.log("Materia creada:", payload);
-    Alert.alert("Listo", "Materia creada (mock).");
-    router.back();
+    // === NUEVO: id + createdAt y guardado en store ===
+    const id = `sub_${Date.now().toString(36)}_${Math.random()
+      .toString(36)
+      .slice(2, 6)}`;
+    const createdAt = new Date().toISOString();
+
+    const subject: Subject = { id, createdAt, ...base };
+
+    addSubject(subject); // persistido en AsyncStorage por el store
+
+    Alert.alert("Listo", "Materia creada.");
+    router.back(); // regresa a la lista de Materias
   };
 
   return (
     <SafeAreaView style={styles.safe}>
       <View style={styles.header}>
-        <Pressable onPress={() => router.back()} hitSlop={8} style={styles.backBtn}>
+        <Pressable
+          onPress={() => router.back()}
+          hitSlop={8}
+          style={styles.backBtn}
+        >
           <Ionicons name="arrow-back" size={22} color="#fff" />
         </Pressable>
         <Text style={styles.headerTitle}>Crear Materia</Text>
         <View style={{ width: 22 }} />
       </View>
 
-      <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
+      <ScrollView
+        contentContainerStyle={styles.content}
+        keyboardShouldPersistTaps="handled"
+      >
         {/* Nombre */}
         <View style={styles.section}>
           <Text style={styles.label}>Nombre</Text>
@@ -188,9 +224,14 @@ export default function SubjectCreateScreen() {
                 <Pressable
                   key={di}
                   onPress={() => toggleDay(di)}
-                  style={[styles.dayChip, active ? styles.dayChipOn : styles.dayChipOff]}
+                  style={[
+                    styles.dayChip,
+                    active ? styles.dayChipOn : styles.dayChipOff,
+                  ]}
                 >
-                  <Text style={[styles.dayChipText, active && { color: "#fff" }]}>
+                  <Text
+                    style={[styles.dayChipText, active && { color: "#fff" }]}
+                  >
                     {DAY_LABELS[di]}
                   </Text>
                 </Pressable>
@@ -203,33 +244,40 @@ export default function SubjectCreateScreen() {
         {anyDaySelected && (
           <View style={styles.section}>
             <Text style={styles.label}>Horas</Text>
-            {((Object.keys(DAY_LABELS) as unknown as DayIndex[]).filter((d) => selectedDays[d]) as DayIndex[])
-              .map((di) => {
-                const t = times[di];
-                return (
-                  <View key={`t-${di}`} style={styles.timeRow}>
-                    <Text style={styles.timeRowDay}>{NICE_DAY[di]}</Text>
+            {(
+              (Object.keys(DAY_LABELS) as unknown as DayIndex[]).filter(
+                (d) => selectedDays[d]
+              ) as DayIndex[]
+            ).map((di) => {
+              const t = times[di];
+              return (
+                <View key={`t-${di}`} style={styles.timeRow}>
+                  <Text style={styles.timeRowDay}>{NICE_DAY[di]}</Text>
 
-                    <View style={styles.timeButtons}>
-                      <Pressable
-                        onPress={() => openPicker(di, "start")}
-                        style={styles.timeBtn}
-                      >
-                        <Ionicons name="time" size={16} color="#333" />
-                        <Text style={styles.timeBtnText}>{formatTime(t.start)}</Text>
-                      </Pressable>
+                  <View style={styles.timeButtons}>
+                    <Pressable
+                      onPress={() => openPicker(di, "start")}
+                      style={styles.timeBtn}
+                    >
+                      <Ionicons name="time" size={16} color="#333" />
+                      <Text style={styles.timeBtnText}>
+                        {formatTime(t.start)}
+                      </Text>
+                    </Pressable>
 
-                      <Pressable
-                        onPress={() => openPicker(di, "end")}
-                        style={styles.timeBtn}
-                      >
-                        <Ionicons name="time" size={16} color="#333" />
-                        <Text style={styles.timeBtnText}>{formatTime(t.end)}</Text>
-                      </Pressable>
-                    </View>
+                    <Pressable
+                      onPress={() => openPicker(di, "end")}
+                      style={styles.timeBtn}
+                    >
+                      <Ionicons name="time" size={16} color="#333" />
+                      <Text style={styles.timeBtnText}>
+                        {formatTime(t.end)}
+                      </Text>
+                    </Pressable>
                   </View>
-                );
-              })}
+                </View>
+              );
+            })}
           </View>
         )}
 
@@ -248,7 +296,10 @@ export default function SubjectCreateScreen() {
                     onPress={() => setColor(c)}
                     style={[
                       styles.swatch,
-                      { backgroundColor: c, borderColor: selected ? "#000" : "transparent" },
+                      {
+                        backgroundColor: c,
+                        borderColor: selected ? "#000" : "transparent",
+                      },
                     ]}
                   />
                 );
@@ -286,7 +337,7 @@ export default function SubjectCreateScreen() {
             <Text style={styles.btnText}>Cancelar</Text>
           </Pressable>
 
-        <Pressable
+          <Pressable
             onPress={onSave}
             style={({ pressed }) => [
               styles.btn,
