@@ -1,7 +1,13 @@
 import { SafeAreaView, View, Text, StyleSheet, Pressable } from "react-native";
 import { useState, useMemo } from "react";
 
-const STATES = {
+type PomodoroSessionState = "idle" | "running";
+
+const STATES: Record<PomodoroSessionState, {
+  background: string;
+  buttonLabel: string;
+  buttonColor: string;
+}> = {
   idle: {
     background: "#e53935",
     buttonLabel: "Iniciar Focus Time",
@@ -14,12 +20,27 @@ const STATES = {
   },
 };
 
+// Placeholder del reloj: reemplazar este componente por la implementación real.
+const TimerDisplayPlaceholder = ({
+  status,
+  timeLabel,
+}: {
+  status: PomodoroSessionState;
+  timeLabel: string;
+}) => (
+  <View style={styles.timerCircle}>
+    <Text style={styles.timerText}>{timeLabel}</Text>
+  </View>
+);
+
 export default function PomodoroSessionScreen() {
-  const [status, setStatus] = useState<"idle" | "running">("idle");
+  const [status, setStatus] = useState<PomodoroSessionState>("idle");
 
   const { background, buttonLabel, buttonColor } = useMemo(() => {
     return STATES[status];
   }, [status]);
+
+  const timeLabel = "25:00";
 
   const toggleSession = () => {
     setStatus((prev) => (prev === "idle" ? "running" : "idle"));
@@ -30,9 +51,8 @@ export default function PomodoroSessionScreen() {
       <View style={[styles.container, { backgroundColor: background }]}>
         <Text style={styles.title}>Pomodoro</Text>
 
-        <View style={styles.timerCircle}>
-          <Text style={styles.timerText}>25:00</Text>
-        </View>
+        {/* Reloj del Pomodoro: aquí irá el componente final */}
+        <TimerDisplayPlaceholder status={status} timeLabel={timeLabel} />
 
         <Pressable
           onPress={toggleSession}
