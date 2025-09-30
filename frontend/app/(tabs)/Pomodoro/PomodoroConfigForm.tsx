@@ -7,8 +7,10 @@ import {
   Pressable,
 } from "react-native";
 import Slider from "@react-native-community/slider";
+import { useRouter } from "expo-router";
 
 export default function ConfigPomodoroScreen() {
+  const router = useRouter();
   const [focusTime, setFocusTime] = useState(25);
   const [shortBreak, setShortBreak] = useState(5);
   const [longBreak, setLongBreak] = useState(20);
@@ -21,6 +23,8 @@ export default function ConfigPomodoroScreen() {
       longBreak,
       cycles,
     });
+
+    router.push("/Pomodoro/PomodoroScreen");
   };
 
   return (
@@ -28,7 +32,7 @@ export default function ConfigPomodoroScreen() {
       <View style={styles.container}>
         {/* Header */}
         <View style={styles.header}>
-          <Text style={styles.headerTitle}>Configuración Pomodoro</Text>
+          <Text style={styles.headerTitle}>Configuracion Pomodoro</Text>
         </View>
 
         {/* Body */}
@@ -81,7 +85,7 @@ export default function ConfigPomodoroScreen() {
             maximumTrackTintColor="#b0bec5"
           />
 
-          {/* Botón */}
+          {/* Boton */}
           <View style={styles.button}>
             <Pressable
               onPress={startPomodoro}
