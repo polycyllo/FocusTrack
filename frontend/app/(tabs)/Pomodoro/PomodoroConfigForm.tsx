@@ -5,26 +5,48 @@ import {
   StyleSheet,
   SafeAreaView,
   Pressable,
+  Alert,
 } from "react-native";
 import Slider from "@react-native-community/slider";
-import { useRouter } from "expo-router";
+import { useRouter, Href } from "expo-router";
 
-export default function ConfigPomodoroScreen() {
+import { usePomodoroStore } from "@/src/store/pomodoro.store";
+
+export default function PomodoroConfigForm() {
   const router = useRouter();
-  const [focusTime, setFocusTime] = useState(25);
-  const [shortBreak, setShortBreak] = useState(5);
-  const [longBreak, setLongBreak] = useState(20);
-  const [cycles, setCycles] = useState(4);
+
+  const config = usePomodoroStore((s) => s.config);
+  const setConfig = usePomodoroStore((s) => s.setConfig);
+  const startWithConfig = usePomodoroStore((s) => s.startWithConfig);
+
+  const [focusTime, setFocusTime] = useState(config.focusTime);
+  const [shortBreak, setShortBreak] = useState(config.shortBreak);
+  const [longBreak, setLongBreak] = useState(config.longBreak);
+  const [cycles, setCycles] = useState(config.cycles);
+
+  const validate = () => {
+    if (focusTime < 1 || focusTime > 60)
+      return "Focus Time debe estar entre 1 y 60.";
+    if (shortBreak < 1 || shortBreak > 30)
+      return "Short Break debe estar entre 1 y 30.";
+    if (longBreak < 5 || longBreak > 60)
+      return "Long Break debe estar entre 5 y 60.";
+    if (cycles < 1 || cycles > 10) return "Ciclos debe estar entre 1 y 10.";
+    return null;
+  };
 
   const startPomodoro = () => {
-    console.log("Pomodoro iniciado con:", {
-      focusTime,
-      shortBreak,
-      longBreak,
-      cycles,
-    });
+    const err = validate();
+    if (err) {
+      Alert.alert("Revisa la configuración", err);
+      return;
+    }
 
-    router.push("/Pomodoro/PomodoroScreen");
+    const next = { focusTime, shortBreak, longBreak, cycles };
+    setConfig(next);
+    startWithConfig(next);
+
+    router.push("/(tabs)/Pomodoro/PomodoroScreen" as Href);
   };
 
   return (
@@ -32,7 +54,7 @@ export default function ConfigPomodoroScreen() {
       <View style={styles.container}>
         {/* Header */}
         <View style={styles.header}>
-          <Text style={styles.headerTitle}>Configuracion Pomodoro</Text>
+          <Text style={styles.headerTitle}>Configuración Pomodoro</Text>
         </View>
 
         {/* Body */}
@@ -40,7 +62,7 @@ export default function ConfigPomodoroScreen() {
           <Text style={styles.label}>Focus Time: {focusTime} min</Text>
           <Slider
             style={styles.slider}
-            minimumValue={5}
+            minimumValue={1}
             maximumValue={60}
             step={1}
             value={focusTime}
@@ -53,7 +75,7 @@ export default function ConfigPomodoroScreen() {
           <Slider
             style={styles.slider}
             minimumValue={1}
-            maximumValue={15}
+            maximumValue={30}
             step={1}
             value={shortBreak}
             onValueChange={setShortBreak}
@@ -85,7 +107,7 @@ export default function ConfigPomodoroScreen() {
             maximumTrackTintColor="#b0bec5"
           />
 
-          {/* Boton */}
+          {/* Botón */}
           <View style={styles.button}>
             <Pressable
               onPress={startPomodoro}
@@ -110,14 +132,8 @@ const COLORS = {
 };
 
 const styles = StyleSheet.create({
-  safe: {
-    flex: 1,
-    backgroundColor: COLORS.background,
-  },
-  container: {
-    flex: 1,
-    backgroundColor: COLORS.background,
-  },
+  safe: { flex: 1, backgroundColor: COLORS.background },
+  container: { flex: 1, backgroundColor: COLORS.background },
   header: {
     backgroundColor: COLORS.header,
     paddingHorizontal: 16,
@@ -125,29 +141,11 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  headerTitle: {
-    color: "#ffffff",
-    fontSize: 18,
-    fontWeight: "600",
-  },
-  body: {
-    flex: 1,
-    padding: 20,
-    justifyContent: "space-between",
-  },
-  label: {
-    fontSize: 16,
-    marginTop: 15,
-    color: "#0d47a1",
-  },
-  slider: {
-    width: "100%",
-    height: 40,
-  },
-  button: {
-    marginTop: 30,
-    alignItems: "center",
-  },
+  headerTitle: { color: "#ffffff", fontSize: 18, fontWeight: "600" },
+  body: { flex: 1, padding: 20, justifyContent: "space-between" },
+  label: { fontSize: 16, marginTop: 15, color: "#0d47a1" },
+  slider: { width: "100%", height: 40 },
+  button: { marginTop: 30, alignItems: "center" },
   customBtn: {
     backgroundColor: COLORS.button,
     paddingVertical: 12,
@@ -155,9 +153,5 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     alignItems: "center",
   },
-  customBtnText: {
-    color: "#fff",
-    fontSize: 16,
-    fontWeight: "600",
-  },
+  customBtnText: { color: "#fff", fontSize: 16, fontWeight: "600" },
 });

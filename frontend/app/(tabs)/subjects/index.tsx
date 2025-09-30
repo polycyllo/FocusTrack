@@ -9,7 +9,9 @@ import {
 } from "react-native";
 import { useRouter, Href } from "expo-router";
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
-import { useSubjectsStore, Subject } from "@/src/store/subjects.store";
+import { useSubjectsStore } from "@/src/store/subjects.store";
+import type { Subject } from "@/src/store/subjects.store";
+import { usePomodoroStore } from "@/src/store/pomodoro.store";
 
 export default function SubjectsScreen() {
   const router = useRouter();
@@ -54,6 +56,14 @@ export default function SubjectsScreen() {
 }
 
 function SubjectCard({ item }: { item: Subject }) {
+  const setSubject = usePomodoroStore((s) => s.setSubject);
+  const router = useRouter();
+
+  const openPomodoroConfig = () => {
+    setSubject(item.id);
+    router.push("/(tabs)/Pomodoro/PomodoroConfigForm" as Href);
+  };
+
   return (
     <View style={styles.card}>
       <View
@@ -72,7 +82,11 @@ function SubjectCard({ item }: { item: Subject }) {
       </View>
 
       <View style={styles.actions}>
-        <Pressable hitSlop={10} style={styles.actionBtn} onPress={() => {}}>
+        <Pressable
+          hitSlop={10}
+          style={styles.actionBtn}
+          onPress={openPomodoroConfig}
+        >
           <MaterialCommunityIcons
             name="timer-plus-outline"
             size={18}
