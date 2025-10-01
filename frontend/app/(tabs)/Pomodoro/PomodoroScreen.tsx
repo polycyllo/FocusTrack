@@ -1,15 +1,29 @@
-import React, { useEffect, useMemo } from "react";
-import { View, Text, StyleSheet, Pressable, SafeAreaView } from "react-native";
+import React, { useEffect, useMemo, useRef, useState } from "react";
+import {
+  View,
+  Text,
+  StyleSheet,
+  Pressable,
+  SafeAreaView,
+  Animated,
+} from "react-native";
+import Feather from "@expo/vector-icons/Feather";
 import { useRouter, Href } from "expo-router";
+import Svg, { Circle } from "react-native-svg";
 
 import { usePomodoroStore } from "@/src/store/pomodoro.store";
 import { useSubjectsStore } from "@/src/store/subjects.store";
 
-const MODE_LABEL: Record<"focus" | "short" | "long", string> = {
-  focus: "Enfoque",
-  short: "Descanso corto",
-  long: "Descanso largo",
+const COLORS = {
+  background: "#4A90E2",
+  button: "#3063c5",
+  white: "#FFFFFF",
 };
+
+const RING_SIZE = 260;
+const STROKE = 8;
+const R = (RING_SIZE - STROKE) / 2;
+const CIRC = 2 * Math.PI * R;
 
 export default function PomodoroScreen() {
   const router = useRouter();
@@ -17,7 +31,6 @@ export default function PomodoroScreen() {
   const session = usePomodoroStore((s) => s.session);
   const pause = usePomodoroStore((s) => s.pause);
   const resume = usePomodoroStore((s) => s.resume);
-  const nextPhase = usePomodoroStore((s) => s.nextPhase);
   const reset = usePomodoroStore((s) => s.reset);
   const tick = usePomodoroStore((s) => s.tick);
 
@@ -32,6 +45,23 @@ export default function PomodoroScreen() {
     return () => clearInterval(id);
   }, [tick]);
 
+  const [hasStarted, setHasStarted] = useState<boolean>(session.isRunning);
+  useEffect(() => {
+    if (session.isRunning && !hasStarted) setHasStarted(true);
+  }, [session.isRunning, hasStarted]);
+
+  const isRunning = session.isRunning;
+  const isIdle = !session.isRunning && !hasStarted;
+  const isPaused = !session.isRunning && hasStarted;
+
+  const [cachedSubjectName, setCachedSubjectName] = useState<
+    string | undefined
+  >(undefined);
+  useEffect(() => {
+    if (subjectName) setCachedSubjectName(subjectName);
+  }, [subjectName]);
+  const displaySubject = subjectName ?? cachedSubjectName;
+
   const minutes = Math.floor(session.remaining / 60);
   const seconds = session.remaining % 60;
   const time = `${String(minutes).padStart(2, "0")}:${String(seconds).padStart(
@@ -39,114 +69,233 @@ export default function PomodoroScreen() {
     "0"
   )}`;
 
+  const [initialSeconds, setInitialSeconds] = useState<number>(
+    Math.max(session.remaining, 1)
+  );
+  useEffect(() => {
+    if (session.remaining > initialSeconds)
+      setInitialSeconds(session.remaining);
+    if (isIdle) setInitialSeconds(Math.max(session.remaining, 1));
+  }, [session.remaining, initialSeconds, isIdle]);
+
+  const fillRatio =
+    initialSeconds > 0 ? 1 - session.remaining / initialSeconds : 0;
+
+  const fillAnim = useRef(new Animated.Value(fillRatio)).current;
+  useEffect(() => {
+    Animated.timing(fillAnim, {
+      toValue: fillRatio,
+      duration: 400,
+      useNativeDriver: false,
+    }).start();
+  }, [fillRatio, fillAnim]);
+
+  const dashOffset = Animated.multiply(fillAnim, CIRC) as unknown as number;
+  const AnimatedCircle = Animated.createAnimatedComponent(Circle);
+
+  const handleStartOrResume = () => {
+    setHasStarted(true);
+    setInitialSeconds(Math.max(session.remaining, 1));
+    resume();
+  };
+  const handlePause = () => pause();
+  const handleReset = () => {
+    reset();
+    setHasStarted(false);
+  };
+
   return (
     <SafeAreaView style={styles.safe}>
       <View style={styles.container}>
-        {/* Header */}
         <View style={styles.header}>
           <Pressable
             onPress={() =>
               router.replace("/(tabs)/Pomodoro/PomodoroConfigForm" as Href)
             }
-            style={styles.backBtn}
+            style={({ pressed }) => [styles.backBtn, pressed && styles.pressed]}
           >
-            <Text style={styles.backTxt}>←</Text>
+            <Feather name="chevron-left" size={24} color={COLORS.white} />
           </Pressable>
           <Text style={styles.headerTitle}>Pomodoro</Text>
           <View style={{ width: 24 }} />
         </View>
 
-        {/* Body */}
         <View style={styles.body}>
-          {subjectName ? (
-            <Text style={styles.subject}>{subjectName}</Text>
+          {displaySubject ? (
+            <Text style={styles.subject}>{displaySubject}</Text>
           ) : null}
-          <Text style={styles.mode}>{MODE_LABEL[session.mode]}</Text>
-          <Text style={styles.timer}>{time}</Text>
 
-          <View style={styles.row}>
-            {session.isRunning ? (
-              <Pressable
-                style={[styles.btn, styles.btnSecondary]}
-                onPress={pause}
-              >
-                <Text style={styles.btnText}>Pausar</Text>
-              </Pressable>
-            ) : (
-              <Pressable
-                style={[styles.btn, styles.btnPrimary]}
-                onPress={resume}
-              >
-                <Text style={styles.btnText}>Reanudar</Text>
-              </Pressable>
-            )}
-            <Pressable
-              style={[styles.btn, styles.btnSecondary]}
-              onPress={nextPhase}
+          {/* Anillo y tempo  */}
+          <View style={styles.ringWrapper}>
+            <Svg
+              width={RING_SIZE}
+              height={RING_SIZE}
+              viewBox={`0 0 ${RING_SIZE} ${RING_SIZE}`}
             >
-              <Text style={styles.btnText}>Siguiente</Text>
-            </Pressable>
+              <Circle
+                cx={RING_SIZE / 2}
+                cy={RING_SIZE / 2}
+                r={R}
+                stroke={COLORS.white + "55"}
+                strokeWidth={STROKE}
+                fill="none"
+              />
+              {/* progre */}
+              <AnimatedCircle
+                cx={RING_SIZE / 2}
+                cy={RING_SIZE / 2}
+                r={R}
+                stroke={COLORS.white}
+                strokeWidth={STROKE}
+                strokeLinecap="round"
+                fill="none"
+                strokeDasharray={`${CIRC} ${CIRC}`}
+                strokeDashoffset={dashOffset}
+                transform={`rotate(-90 ${RING_SIZE / 2} ${RING_SIZE / 2})`} // empieza arriba
+              />
+            </Svg>
+
+            <View style={styles.timeOverlay}>
+              <Text style={styles.timer}>{time}</Text>
+            </View>
           </View>
 
-          <Pressable style={[styles.btn, styles.btnDanger]} onPress={reset}>
-            <Text style={styles.btnText}>Reiniciar todo</Text>
-          </Pressable>
+          <View style={styles.actions}>
+            {isIdle && (
+              <Pressable
+                style={({ pressed }) => [
+                  styles.btn,
+                  styles.btnPrimary,
+                  pressed && styles.btnPressed,
+                ]}
+                onPress={handleStartOrResume}
+              >
+                <Feather name="play" size={18} color={COLORS.white} />
+                <Text style={styles.btnText}>Iniciar Focus Time</Text>
+              </Pressable>
+            )}
+
+            {isRunning && (
+              <Pressable
+                style={({ pressed }) => [
+                  styles.btn,
+                  styles.btnPrimary,
+                  pressed && styles.btnPressed,
+                ]}
+                onPress={handlePause}
+              >
+                <Feather name="pause" size={18} color={COLORS.white} />
+                <Text style={styles.btnText}>Pausar</Text>
+              </Pressable>
+            )}
+
+            {isPaused && (
+              <View style={styles.row}>
+                <Pressable
+                  style={({ pressed }) => [
+                    styles.btn,
+                    styles.btnPrimary,
+                    pressed && styles.btnPressed,
+                    styles.btnHalf,
+                  ]}
+                  onPress={handleStartOrResume}
+                >
+                  <Feather name="play" size={18} color={COLORS.white} />
+                  <Text style={styles.btnText}>Continuar</Text>
+                </Pressable>
+
+                <Pressable
+                  style={({ pressed }) => [
+                    styles.btn,
+                    styles.btnPrimary,
+                    pressed && styles.btnPressed,
+                    styles.btnHalf,
+                  ]}
+                  onPress={handleReset}
+                >
+                  <Feather name="square" size={18} color={COLORS.white} />
+                  <Text style={styles.btnText}>Terminar</Text>
+                </Pressable>
+              </View>
+            )}
+          </View>
         </View>
       </View>
     </SafeAreaView>
   );
 }
 
-const COLORS = {
-  background: "#90caf9",
-  header: "#1976d2",
-  text: "#0d47a1",
-  primary: "#1565c0",
-  secondary: "#70B1EA",
-  danger: "#e74c3c",
-  white: "#fff",
-};
-
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: COLORS.background },
   container: { flex: 1 },
+
   header: {
-    backgroundColor: COLORS.header,
+    backgroundColor: "transparent",
     paddingHorizontal: 16,
     paddingVertical: 12,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
   },
-  backBtn: { padding: 6, borderRadius: 8 },
-  backTxt: { color: COLORS.white, fontSize: 18, fontWeight: "700" },
-  headerTitle: { color: COLORS.white, fontSize: 18, fontWeight: "700" },
+  backBtn: { padding: 6, borderRadius: 10 },
+  pressed: { opacity: 0.7 },
+  headerTitle: {
+    color: COLORS.white,
+    fontSize: 22,
+    fontWeight: "800",
+    letterSpacing: 0.5,
+  },
 
   body: {
     flex: 1,
     alignItems: "center",
     justifyContent: "center",
-    padding: 24,
+    paddingHorizontal: 24,
     gap: 24,
   },
-  subject: { color: COLORS.text, fontSize: 16, fontWeight: "700" },
-  mode: { color: COLORS.text, fontSize: 18, fontWeight: "700" },
+  subject: {
+    color: COLORS.white,
+    fontSize: 16,
+    fontWeight: "700",
+    opacity: 0.92,
+  },
+
+  ringWrapper: {
+    position: "relative",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  timeOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    alignItems: "center",
+    justifyContent: "center",
+  },
   timer: {
-    color: COLORS.text,
+    color: COLORS.white,
     fontSize: 72,
-    fontWeight: "800",
+    fontWeight: "900",
     letterSpacing: 2,
   },
 
+  actions: { width: "100%", paddingHorizontal: 8 },
   row: { flexDirection: "row", gap: 12 },
+
   btn: {
-    paddingVertical: 12,
-    paddingHorizontal: 20,
-    borderRadius: 10,
+    height: 52,
+    borderRadius: 14,
+    paddingHorizontal: 18,
+    flexDirection: "row",
     alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
   },
-  btnPrimary: { backgroundColor: COLORS.primary },
-  btnSecondary: { backgroundColor: COLORS.secondary },
-  btnDanger: { backgroundColor: COLORS.danger },
-  btnText: { color: COLORS.white, fontWeight: "700" },
+  btnHalf: { flex: 1 },
+  btnPrimary: { backgroundColor: COLORS.button },
+  btnPressed: { transform: [{ scale: 0.98 }] },
+  btnText: {
+    color: COLORS.white,
+    fontWeight: "800",
+    fontSize: 16,
+    letterSpacing: 0.3,
+  },
 });
