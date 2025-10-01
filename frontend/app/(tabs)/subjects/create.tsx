@@ -285,9 +285,9 @@ export default function SubjectCreateScreen() {
         <View style={styles.section}>
           <Text style={styles.label}>Color / ícono</Text>
 
-          <View style={styles.rowBetween}>
+          <View style={[styles.rowBetween, { flexWrap: "wrap", gap: 10 }]}>
             {/* Colores */}
-            <View style={{ flexDirection: "row", gap: 10 }}>
+            <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 10 }}>
               {COLOR_SWATCHES.map((c) => {
                 const selected = color === c;
                 return (
@@ -307,7 +307,7 @@ export default function SubjectCreateScreen() {
             </View>
 
             {/* Iconos */}
-            <View style={{ flexDirection: "row", gap: 10 }}>
+            <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 10 }}>
               {ICON_OPTIONS.map((opt) => {
                 const selected = icon === opt.key;
                 return (
