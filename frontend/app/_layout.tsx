@@ -7,6 +7,7 @@ import { useEffect } from 'react';
 import 'react-native-reanimated';
 
 import { useColorScheme } from '@/components/useColorScheme';
+import { ensureSchema } from '../src/db/init';
 
 export {
   // Catch any errors thrown by the Layout component.
@@ -33,14 +34,16 @@ export default function RootLayout() {
   }, [error]);
 
   useEffect(() => {
-    if (loaded) {
-      SplashScreen.hideAsync();
-    }
+    if (!loaded) return;
+
+    // crea tablas si no existen
+    ensureSchema();
+
+    // todo listo: ocultar splash
+    SplashScreen.hideAsync();
   }, [loaded]);
 
-  if (!loaded) {
-    return null;
-  }
+  if (!loaded) return null;
 
   return <RootLayoutNav />;
 }
