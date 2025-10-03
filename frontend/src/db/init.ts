@@ -7,7 +7,7 @@ export function ensureSchema() {
 
     CREATE TABLE IF NOT EXISTS student (
       student_id INTEGER PRIMARY KEY AUTOINCREMENT,
-      title TEXT NOT NULL,
+      name TEXT NOT NULL,
       email TEXT NOT NULL,
       password TEXT NOT NULL
     );
