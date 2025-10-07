@@ -14,16 +14,15 @@ import Svg, { Circle } from "react-native-svg";
 import { usePomodoroStore } from "@/src/store/pomodoro.store";
 import { useSubjectsStore } from "@/src/store/subjects.store";
 
-const COLORS = {
-  background: "#4A90E2",
-  button: "#3063c5",
-  white: "#FFFFFF",
-};
+import type { PomodoroSessionState } from "@/constants/pomodoro";
+import { POMODORO_STATES } from "@/constants/pomodoro";
 
 const RING_SIZE = 260;
 const STROKE = 8;
 const R = (RING_SIZE - STROKE) / 2;
 const CIRC = 2 * Math.PI * R;
+const WHITE = "#FFFFFF";
+const SECONDARY_TEXT = "#0A0A0A";
 
 export default function PomodoroScreen() {
   const router = useRouter();
@@ -104,9 +103,26 @@ export default function PomodoroScreen() {
     setHasStarted(false);
   };
 
+  const sessionState: PomodoroSessionState = isIdle
+    ? "idle"
+    : isRunning
+    ? "running"
+    : "finished";
+  const visualState = useMemo(
+    () => POMODORO_STATES[sessionState],
+    [sessionState]
+  );
+
+  const primaryAction = visualState.primary;
+  const secondaryAction = visualState.secondary;
+
   return (
-    <SafeAreaView style={styles.safe}>
-      <View style={styles.container}>
+    <SafeAreaView
+      style={[styles.safe, { backgroundColor: visualState.background }]}
+    >
+      <View
+        style={[styles.container, { backgroundColor: visualState.background }]}
+      >
         <View style={styles.header}>
           <Pressable
             onPress={() =>
@@ -114,7 +130,7 @@ export default function PomodoroScreen() {
             }
             style={({ pressed }) => [styles.backBtn, pressed && styles.pressed]}
           >
-            <Feather name="chevron-left" size={24} color={COLORS.white} />
+            <Feather name="chevron-left" size={24} color={WHITE} />
           </Pressable>
           <Text style={styles.headerTitle}>Pomodoro</Text>
           <View style={{ width: 24 }} />
@@ -136,7 +152,7 @@ export default function PomodoroScreen() {
                 cx={RING_SIZE / 2}
                 cy={RING_SIZE / 2}
                 r={R}
-                stroke={COLORS.white + "55"}
+                stroke={WHITE + "55"}
                 strokeWidth={STROKE}
                 fill="none"
               />
@@ -145,7 +161,7 @@ export default function PomodoroScreen() {
                 cx={RING_SIZE / 2}
                 cy={RING_SIZE / 2}
                 r={R}
-                stroke={COLORS.white}
+                stroke={WHITE}
                 strokeWidth={STROKE}
                 strokeLinecap="round"
                 fill="none"
@@ -165,13 +181,15 @@ export default function PomodoroScreen() {
               <Pressable
                 style={({ pressed }) => [
                   styles.btn,
-                  styles.btnPrimary,
+                  { backgroundColor: primaryAction.color },
                   pressed && styles.btnPressed,
                 ]}
                 onPress={handleStartOrResume}
               >
-                <Feather name="play" size={18} color={COLORS.white} />
-                <Text style={styles.btnText}>Iniciar Focus Time</Text>
+                <Feather name="play" size={18} color={WHITE} />
+                <Text style={[styles.btnText, { color: WHITE }]}>
+                  {primaryAction.label}
+                </Text>
               </Pressable>
             )}
 
@@ -179,13 +197,15 @@ export default function PomodoroScreen() {
               <Pressable
                 style={({ pressed }) => [
                   styles.btn,
-                  styles.btnPrimary,
+                  { backgroundColor: primaryAction.color },
                   pressed && styles.btnPressed,
                 ]}
                 onPress={handlePause}
               >
-                <Feather name="pause" size={18} color={COLORS.white} />
-                <Text style={styles.btnText}>Pausar</Text>
+                <Feather name="pause" size={18} color={WHITE} />
+                <Text style={[styles.btnText, { color: WHITE }]}>
+                  {primaryAction.label}
+                </Text>
               </Pressable>
             )}
 
@@ -194,28 +214,36 @@ export default function PomodoroScreen() {
                 <Pressable
                   style={({ pressed }) => [
                     styles.btn,
-                    styles.btnPrimary,
+                    { backgroundColor: primaryAction.color },
                     pressed && styles.btnPressed,
                     styles.btnHalf,
                   ]}
                   onPress={handleStartOrResume}
                 >
-                  <Feather name="play" size={18} color={COLORS.white} />
-                  <Text style={styles.btnText}>Continuar</Text>
+                  <Feather name="play" size={18} color={WHITE} />
+                  <Text style={[styles.btnText, { color: WHITE }]}>
+                    {primaryAction.label}
+                  </Text>
                 </Pressable>
 
-                <Pressable
-                  style={({ pressed }) => [
-                    styles.btn,
-                    styles.btnPrimary,
-                    pressed && styles.btnPressed,
-                    styles.btnHalf,
-                  ]}
-                  onPress={handleReset}
-                >
-                  <Feather name="square" size={18} color={COLORS.white} />
-                  <Text style={styles.btnText}>Terminar</Text>
-                </Pressable>
+                {secondaryAction ? (
+                  <Pressable
+                    style={({ pressed }) => [
+                      styles.btn,
+                      { backgroundColor: secondaryAction.color },
+                      pressed && styles.btnPressed,
+                      styles.btnHalf,
+                    ]}
+                    onPress={handleReset}
+                  >
+                    <Feather name="square" size={18} color={SECONDARY_TEXT} />
+                    <Text
+                      style={[styles.btnText, { color: SECONDARY_TEXT }]}
+                    >
+                      {secondaryAction.label}
+                    </Text>
+                  </Pressable>
+                ) : null}
               </View>
             )}
           </View>
@@ -226,7 +254,7 @@ export default function PomodoroScreen() {
 }
 
 const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: COLORS.background },
+  safe: { flex: 1 },
   container: { flex: 1 },
 
   header: {
@@ -240,7 +268,7 @@ const styles = StyleSheet.create({
   backBtn: { padding: 6, borderRadius: 10 },
   pressed: { opacity: 0.7 },
   headerTitle: {
-    color: COLORS.white,
+    color: WHITE,
     fontSize: 22,
     fontWeight: "800",
     letterSpacing: 0.5,
@@ -254,7 +282,7 @@ const styles = StyleSheet.create({
     gap: 24,
   },
   subject: {
-    color: COLORS.white,
+    color: WHITE,
     fontSize: 16,
     fontWeight: "700",
     opacity: 0.92,
@@ -271,7 +299,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   timer: {
-    color: COLORS.white,
+    color: WHITE,
     fontSize: 72,
     fontWeight: "900",
     letterSpacing: 2,
@@ -290,10 +318,8 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   btnHalf: { flex: 1 },
-  btnPrimary: { backgroundColor: COLORS.button },
   btnPressed: { transform: [{ scale: 0.98 }] },
   btnText: {
-    color: COLORS.white,
     fontWeight: "800",
     fontSize: 16,
     letterSpacing: 0.3,
