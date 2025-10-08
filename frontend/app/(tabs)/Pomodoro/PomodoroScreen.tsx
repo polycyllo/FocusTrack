@@ -71,14 +71,28 @@ export default function PomodoroScreen() {
   const [initialSeconds, setInitialSeconds] = useState<number>(
     Math.max(session.remaining, 1)
   );
+  const prevMode = useRef(session.mode);
   useEffect(() => {
-    if (session.remaining > initialSeconds)
-      setInitialSeconds(session.remaining);
-    if (isIdle) setInitialSeconds(Math.max(session.remaining, 1));
-  }, [session.remaining, initialSeconds, isIdle]);
+    if (session.mode !== prevMode.current) {
+      prevMode.current = session.mode;
+      setInitialSeconds(Math.max(session.remaining, 1));
+      return;
+    }
 
-  const fillRatio =
-    initialSeconds > 0 ? 1 - session.remaining / initialSeconds : 0;
+    if (session.remaining > initialSeconds) {
+      setInitialSeconds(Math.max(session.remaining, 1));
+      return;
+    }
+
+    if (isIdle) setInitialSeconds(Math.max(session.remaining, 1));
+  }, [session.mode, session.remaining, initialSeconds, isIdle]);
+
+  const fillRatio = useMemo(() => {
+    if (initialSeconds <= 0) return 0;
+    const ratio = 1 - session.remaining / initialSeconds;
+    if (Number.isNaN(ratio)) return 0;
+    return Math.min(1, Math.max(0, ratio));
+  }, [initialSeconds, session.remaining]);
 
   const fillAnim = useRef(new Animated.Value(fillRatio)).current;
   useEffect(() => {
