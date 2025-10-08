@@ -1,4 +1,10 @@
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, {
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  useCallback,
+} from "react";
 import {
   View,
   Text,
@@ -72,10 +78,49 @@ export default function PomodoroScreen() {
     Math.max(session.remaining, 1)
   );
   const prevMode = useRef(session.mode);
+  const autoStartTimer = useRef<ReturnType<typeof setInterval> | null>(null);
+  const [autoStartSeconds, setAutoStartSeconds] = useState<number | null>(null);
+
+  const clearAutoStartCountdown = useCallback(() => {
+    if (autoStartTimer.current !== null) {
+      clearInterval(autoStartTimer.current);
+      autoStartTimer.current = null;
+    }
+    setAutoStartSeconds(null);
+  }, []);
+
+  const startAutoStartCountdown = useCallback(() => {
+    clearAutoStartCountdown();
+    setAutoStartSeconds(5);
+
+    autoStartTimer.current = setInterval(() => {
+      setAutoStartSeconds((prev) => {
+        if (prev === null) return prev;
+        if (prev <= 1) {
+          if (autoStartTimer.current !== null) {
+            clearInterval(autoStartTimer.current);
+            autoStartTimer.current = null;
+          }
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+  }, [clearAutoStartCountdown]);
+
   useEffect(() => {
     if (session.mode !== prevMode.current) {
       prevMode.current = session.mode;
       setInitialSeconds(Math.max(session.remaining, 1));
+
+      if (
+        (session.mode === "short" || session.mode === "long") &&
+        !session.isRunning
+      ) {
+        startAutoStartCountdown();
+      } else {
+        clearAutoStartCountdown();
+      }
       return;
     }
 
@@ -85,7 +130,32 @@ export default function PomodoroScreen() {
     }
 
     if (isIdle) setInitialSeconds(Math.max(session.remaining, 1));
-  }, [session.mode, session.remaining, initialSeconds, isIdle]);
+  }, [
+    session.mode,
+    session.remaining,
+    initialSeconds,
+    isIdle,
+    startAutoStartCountdown,
+    clearAutoStartCountdown,
+  ]);
+
+  useEffect(() => {
+    if (session.isRunning) {
+      clearAutoStartCountdown();
+    }
+  }, [session.isRunning, clearAutoStartCountdown]);
+
+  useEffect(() => {
+    if (autoStartSeconds === 0) {
+      setHasStarted(true);
+      resume();
+      setAutoStartSeconds(null);
+    }
+  }, [autoStartSeconds, resume]);
+
+  useEffect(() => {
+    return () => clearAutoStartCountdown();
+  }, [clearAutoStartCountdown]);
 
   const fillRatio = useMemo(() => {
     if (initialSeconds <= 0) return 0;
@@ -107,14 +177,19 @@ export default function PomodoroScreen() {
   const AnimatedCircle = Animated.createAnimatedComponent(Circle);
 
   const handleStartOrResume = () => {
+    clearAutoStartCountdown();
     setHasStarted(true);
     setInitialSeconds(Math.max(session.remaining, 1));
     resume();
   };
-  const handlePause = () => pause();
+  const handlePause = () => {
+    clearAutoStartCountdown();
+    pause();
+  };
   const handleReset = () => {
     reset();
     setHasStarted(false);
+    clearAutoStartCountdown();
   };
 
   const sessionState: PomodoroSessionState = isIdle
@@ -153,6 +228,12 @@ export default function PomodoroScreen() {
         <View style={styles.body}>
           {displaySubject ? (
             <Text style={styles.subject}>{displaySubject}</Text>
+          ) : null}
+
+          {autoStartSeconds !== null ? (
+            <Text style={styles.autoStartCountdown}>
+              {autoStartSeconds}s
+            </Text>
           ) : null}
 
           {/* Anillo y tempo  */}
@@ -300,6 +381,11 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: "700",
     opacity: 0.92,
+  },
+  autoStartCountdown: {
+    color: WHITE,
+    fontSize: 24,
+    fontWeight: "700",
   },
 
   ringWrapper: {
