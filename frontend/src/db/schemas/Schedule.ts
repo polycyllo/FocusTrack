@@ -5,7 +5,7 @@ export const schedule = sqliteTable('schedule',{
     scheduleId: integer("schedule_id").primaryKey({ autoIncrement: true }),
     startTime: text("start_time"),
     endTime: text("end_time"),
-    date: text("password"),
+    day: integer("day"),
     status: integer("status").$type<0|1>().notNull().default(1),
     subjectId: integer("subject_id").notNull().references( () => subject.subjectId)
 })

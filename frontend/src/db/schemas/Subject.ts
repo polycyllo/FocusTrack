@@ -6,5 +6,5 @@ export const subject = sqliteTable('subject',{
     title: text("title").notNull(),
     description: text("description").notNull(),
     color: text("color").notNull(),
-    studentId: integer("subject_id").notNull().references(() => student.studentId)
+        studentId: integer("student_id").notNull().references(() => student.studentId)
 })
