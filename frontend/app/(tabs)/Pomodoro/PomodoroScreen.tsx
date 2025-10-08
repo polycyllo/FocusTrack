@@ -179,7 +179,10 @@ export default function PomodoroScreen() {
   const handleStartOrResume = () => {
     clearAutoStartCountdown();
     setHasStarted(true);
-    setInitialSeconds(Math.max(session.remaining, 1));
+    setInitialSeconds((prev) => {
+      const next = Math.max(session.remaining, 1);
+      return next > prev ? next : prev;
+    });
     resume();
   };
   const handlePause = () => {
