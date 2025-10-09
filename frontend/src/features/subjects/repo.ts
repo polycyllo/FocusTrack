@@ -72,7 +72,7 @@ export async function printAllSubjectsWithSchedules() {
   console.log('--- end dump ---')
 }
 
-//eliminar materia 
+//eliminar materia y horario
 export async function deleteSubjectWithSchedules(subjectId: number) {
   await db.delete(schedule).where(eq(schedule.subjectId, subjectId));
   await db.delete(subject).where(eq(subject.subjectId, subjectId));
