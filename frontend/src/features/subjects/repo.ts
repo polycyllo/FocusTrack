@@ -71,3 +71,50 @@ export async function printAllSubjectsWithSchedules() {
   }
   console.log('--- end dump ---')
 }
+
+//eliminar materia 
+export async function deleteSubjectWithSchedules(subjectId: number) {
+  await db.delete(schedule).where(eq(schedule.subjectId, subjectId));
+  await db.delete(subject).where(eq(subject.subjectId, subjectId));
+
+  console.log(`Materia con ID ${subjectId} y sus horarios fueron eliminados.`);
+}
+
+//editar materia 
+export async function updateSubjectWithSchedules(
+  subjectId: number,
+  data: {
+    title?: string;
+    description?: string | null;
+    color?: string | null;
+    schedules?: { day: number; start: string; end: string }[];
+  }
+) {
+  //Actualizar datos de la materia
+  await db
+    .update(subject)
+    .set({
+      ...(data.title && { title: data.title }),
+      ...(data.description && { description: data.description }),
+      ...(data.color && { color: data.color }),
+    })
+    .where(eq(subject.subjectId, subjectId));
+
+  //Si se pasaron nuevos horarios, eliminar los anteriores y crear los nuevos
+  if (data.schedules && data.schedules.length > 0) {
+    await db.delete(schedule).where(eq(schedule.subjectId, subjectId));
+
+    const newSchedules = data.schedules.map((s) => ({
+      startTime: s.start,
+      endTime: s.end,
+      day: s.day,
+      status: 1,
+      subjectId,
+    }));
+
+    await db.insert(schedule).values(newSchedules as any[]);
+  }
+
+  console.log(`Materia ${subjectId} fue actualizada correctamente.`);
+}
+
