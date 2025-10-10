@@ -15,7 +15,6 @@ import DateTimePicker, {
 } from "@react-native-community/datetimepicker";
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 
-// 👇 CAMBIO: Importar funciones del repositorio
 import { addSubjectWithSchedules } from "@/src/features/subjects/repo";
 
 type DayIndex = 0 | 1 | 2 | 3 | 4 | 5 | 6;
@@ -138,7 +137,7 @@ export default function SubjectCreateScreen() {
     return null;
   };
 
-  // 👇 CAMBIO: Función async para guardar en DB
+  //CAMBIO: Función async para guardar en DB
   const onSave = async () => {
     const error = validate();
     if (error) {
@@ -147,7 +146,7 @@ export default function SubjectCreateScreen() {
     }
 
     try {
-      // Preparar los schedules
+      // Preparar schedules
       const schedules = Object.entries(selectedDays)
         .filter(([_, isOn]) => isOn)
         .map(([key]) => {
@@ -160,10 +159,10 @@ export default function SubjectCreateScreen() {
           };
         });
 
-      // 👇 Guardar en la base de datos
+      // Guardar en la base de datos
       await addSubjectWithSchedules({
         title: name.trim(),
-        description: null, // o puedes añadir un campo para esto
+        description: null,
         color: color,
         schedules: schedules,
       });
