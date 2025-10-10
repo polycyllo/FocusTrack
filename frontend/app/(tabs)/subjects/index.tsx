@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import {
   View,
   Text,
@@ -8,11 +8,13 @@ import {
   FlatList,
   Alert,
 } from "react-native";
-import { useRouter, Href } from "expo-router";
+import { useRouter, Href, useFocusEffect } from "expo-router";
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
-import { useSubjectsStore } from "@/src/store/subjects.store";
-import type { Subject } from "@/src/store/subjects.store";
 import { usePomodoroStore } from "@/src/store/pomodoro.store";
+import { 
+  deleteSubjectWithSchedules, 
+  getAllSubjectsWithSchedules 
+} from "@/src/features/subjects/repo";
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
@@ -22,9 +24,59 @@ import Animated, {
 } from "react-native-reanimated";
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
 
+// 👇 Tipo para las materias desde la DB
+type SubjectFromDB = {
+  subjectId?: number;
+  subject_id?: number; // variante según la DB
+  title: string;
+  description?: string | null;
+  color?: string | null;
+};
+
+type ScheduleFromDB = {
+  scheduleId?: number;
+  schedule_id?: number;
+  startTime: string | null;
+  start_time?: string | null;
+  endTime: string | null;
+  end_time?: string | null;
+  day: number | null;
+  status?: number | null;
+  subjectId?: number;
+  subject_id?: number;
+};
+
 export default function SubjectsScreen() {
   const router = useRouter();
-  const subjects = useSubjectsStore((s) => s.subjects);
+  const [subjects, setSubjects] = useState<
+    Array<{ subject: SubjectFromDB; schedules: ScheduleFromDB[] }>
+  >([]);
+  const [loading, setLoading] = useState(true);
+
+  // 👇 Función para cargar materias desde la DB
+  const loadSubjects = async () => {
+    try {
+      setLoading(true);
+      const data = await getAllSubjectsWithSchedules();
+      setSubjects(data);
+    } catch (error) {
+      console.error("Error cargando materias:", error);
+      Alert.alert("Error", "No se pudieron cargar las materias");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // 👇 Cargar al montar y cada vez que la pantalla reciba foco
+  useEffect(() => {
+    loadSubjects();
+  }, []);
+
+  useFocusEffect(
+    useCallback(() => {
+      loadSubjects();
+    }, [])
+  );
 
   const goCreate = () => router.push("/(tabs)/subjects/create" as Href);
 
@@ -47,7 +99,11 @@ export default function SubjectsScreen() {
         </View>
 
         {/* Body */}
-        {subjects.length === 0 ? (
+        {loading ? (
+          <View style={styles.emptyBody}>
+            <Text style={styles.emptyText}>Cargando...</Text>
+          </View>
+        ) : subjects.length === 0 ? (
           <View style={styles.emptyBody}>
             <Text style={styles.emptyText}>No hay materias creadas</Text>
           </View>
@@ -55,8 +111,12 @@ export default function SubjectsScreen() {
           <FlatList
             contentContainerStyle={{ padding: 12, paddingBottom: 20 }}
             data={subjects}
-            keyExtractor={(item) => item.id}
-            renderItem={({ item }) => <SubjectCard item={item} />}
+            keyExtractor={(item) => 
+              (item.subject.subjectId || item.subject.subject_id)?.toString() || ""
+            }
+            renderItem={({ item }) => (
+              <SubjectCard item={item} onDeleted={loadSubjects} />
+            )}
           />
         )}
       </View>
@@ -64,8 +124,13 @@ export default function SubjectsScreen() {
   );
 }
 
-function SubjectCard({ item }: { item: Subject }) {
-  const { removeSubject } = useSubjectsStore();
+function SubjectCard({ 
+  item, 
+  onDeleted 
+}: { 
+  item: { subject: SubjectFromDB; schedules: ScheduleFromDB[] };
+  onDeleted: () => void;
+}) {
   const setSubject = usePomodoroStore((s) => s.setSubject);
   const router = useRouter();
 
@@ -97,7 +162,6 @@ function SubjectCard({ item }: { item: Subject }) {
     })
     .onEnd((event, success) => {
       if (success) {
-        // 👇 Ejecutamos fuera del hilo de animación
         runOnJS(setDeleting)(true);
         fillOpacity.value = withTiming(0, { duration: 300 });
       } else {
@@ -106,16 +170,29 @@ function SubjectCard({ item }: { item: Subject }) {
       }
     });
 
-  const confirmDelete = () => {
+  const confirmDelete = async () => {
+    const subjectId = item.subject.subjectId || item.subject.subject_id;
+    
     Alert.alert(
       "Confirmar eliminación",
-      `¿Eliminar la materia "${item.name}"?`,
+      `¿Eliminar la materia "${item.subject.title}"?`,
       [
-        { text: "Cancelar", style: "cancel" },
+        { text: "Cancelar", style: "cancel", onPress: () => setDeleting(false) },
         {
           text: "Eliminar",
           style: "destructive",
-          onPress: () => removeSubject(item.id),
+          onPress: async () => {
+            try {
+              if (subjectId) {
+                await deleteSubjectWithSchedules(subjectId);
+                Alert.alert("Éxito", "Materia eliminada");
+                onDeleted(); // Recargar lista
+              }
+            } catch (error) {
+              console.error("Error eliminando materia:", error);
+              Alert.alert("Error", "No se pudo eliminar la materia");
+            }
+          },
         },
       ]
     );
@@ -124,8 +201,11 @@ function SubjectCard({ item }: { item: Subject }) {
   const cancelDelete = () => setDeleting(false);
 
   const openPomodoroConfig = () => {
-    setSubject(item.id);
-    router.push("/(tabs)/Pomodoro/PomodoroConfigForm" as Href);
+    const subjectId = item.subject.subjectId || item.subject.subject_id;
+    if (subjectId) {
+      setSubject(subjectId.toString());
+      router.push("/(tabs)/Pomodoro/PomodoroConfigForm" as Href);
+    }
   };
 
   return (
@@ -145,10 +225,10 @@ function SubjectCard({ item }: { item: Subject }) {
           <View
             style={[
               styles.iconCircle,
-              { backgroundColor: item.color || "#70B1EA" },
+              { backgroundColor: item.subject.color || "#70B1EA" },
             ]}
           >
-            {renderSubjectIcon(item.icon)}
+            <Ionicons name="book" size={18} color="#fff" />
           </View>
 
           <View style={{ flex: 1 }}>
@@ -157,8 +237,13 @@ function SubjectCard({ item }: { item: Subject }) {
               ellipsizeMode="tail"
               style={styles.cardTitle}
             >
-              {item.name}
+              {item.subject.title || "Sin nombre"}
             </Text>
+            {item.schedules && item.schedules.length > 0 && (
+              <Text style={styles.scheduleText}>
+                {item.schedules.length} horario{item.schedules.length !== 1 ? "s" : ""}
+              </Text>
+            )}
           </View>
         </View>
 
@@ -228,21 +313,6 @@ function SubjectCard({ item }: { item: Subject }) {
   );
 }
 
-function renderSubjectIcon(key: string) {
-  switch (key) {
-    case "book":
-      return <Ionicons name="book" size={18} color="#fff" />;
-    case "calculator":
-      return <Ionicons name="calculator" size={18} color="#fff" />;
-    case "flask":
-      return <Ionicons name="flask" size={18} color="#fff" />;
-    case "code-tags":
-      return <MaterialCommunityIcons name="code-tags" size={18} color="#fff" />;
-    default:
-      return <Ionicons name="bookmark" size={18} color="#fff" />;
-  }
-}
-
 const COLORS = {
   background: "#9ECDF2",
   header: "#4A90E2",
@@ -306,6 +376,11 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     fontSize: 15,
     lineHeight: 20,
+  },
+  scheduleText: {
+    color: "rgba(255,255,255,0.7)",
+    fontSize: 12,
+    marginTop: 2,
   },
   actions: { flexDirection: "row", gap: 8, marginLeft: 8 },
   actionBtn: {
