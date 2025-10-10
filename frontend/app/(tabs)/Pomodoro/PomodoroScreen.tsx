@@ -22,6 +22,7 @@ import { useSubjectsStore } from "@/src/store/subjects.store";
 
 import type { PomodoroSessionState } from "@/constants/pomodoro";
 import { POMODORO_STATES } from "@/constants/pomodoro";
+import { playBell } from "@/src/utils/sounds";
 
 const RING_SIZE = 260;
 const STROKE = 8;
@@ -109,7 +110,15 @@ export default function PomodoroScreen() {
   }, [clearAutoStartCountdown]);
 
   useEffect(() => {
-    if (session.mode !== prevMode.current) {
+    const previousMode = prevMode.current;
+
+    if (session.mode !== previousMode) {
+      if (previousMode === "focus" && session.mode === "short") {
+        void playBell();
+      } else if (previousMode === "short" && session.mode === "focus") {
+        void playBell();
+      }
+
       prevMode.current = session.mode;
       setInitialSeconds(Math.max(session.remaining, 1));
 
