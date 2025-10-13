@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useCallback, useState } from "react";
 import {
   View,
   Text,
@@ -8,21 +8,27 @@ import {
   Alert,
 } from "react-native";
 import Slider from "@react-native-community/slider";
-import { useRouter, Href } from "expo-router";
+import { useRouter, Href, useFocusEffect } from "expo-router";
 
 import { usePomodoroStore } from "@/src/store/pomodoro.store";
+import {
+  getPomodoroConfigBySubject,
+  upsertPomodoroConfigForSubject,
+} from "@/src/features/pomodoro/repo";
 
 export default function PomodoroConfigForm() {
   const router = useRouter();
 
-  const config = usePomodoroStore((s) => s.config);
+  const sessionSubjectId = usePomodoroStore((s) => s.session.subjectId);
   const setConfig = usePomodoroStore((s) => s.setConfig);
   const startWithConfig = usePomodoroStore((s) => s.startWithConfig);
 
-  const [focusTime, setFocusTime] = useState(config.focusTime);
-  const [shortBreak, setShortBreak] = useState(config.shortBreak);
-  const [longBreak, setLongBreak] = useState(config.longBreak);
-  const [cycles, setCycles] = useState(config.cycles);
+  const [focusTime, setFocusTime] = useState(25);
+  const [shortBreak, setShortBreak] = useState(5);
+  const [longBreak, setLongBreak] = useState(20);
+  const [cycles, setCycles] = useState(4);
+  const [loading, setLoading] = useState(false);
+  const [saving, setSaving] = useState(false);
 
   const validate = () => {
     if (focusTime < 1 || focusTime > 60)
@@ -35,18 +41,108 @@ export default function PomodoroConfigForm() {
     return null;
   };
 
-  const startPomodoro = () => {
+  useFocusEffect(
+    useCallback(() => {
+      let active = true;
+
+      const loadConfig = async () => {
+        if (!sessionSubjectId) return;
+
+        const numericId = Number(sessionSubjectId);
+        if (Number.isNaN(numericId)) {
+          console.warn(
+            "[PomodoroConfigForm] subjectId inválido:",
+            sessionSubjectId
+          );
+          return;
+        }
+
+        setLoading(true);
+        try {
+          const stored = await getPomodoroConfigBySubject(numericId);
+          if (!active) return;
+
+          if (stored) {
+            setFocusTime(stored.focus ?? 25);
+            setShortBreak(stored.shortBreak ?? 5);
+            setLongBreak(stored.longBreak ?? 20);
+            setCycles(stored.cicle ?? 4);
+          } else {
+            setFocusTime(25);
+            setShortBreak(5);
+            setLongBreak(20);
+            setCycles(4);
+          }
+        } catch (error) {
+          console.error("Error cargando config pomodoro:", error);
+          if (active) {
+            Alert.alert(
+              "Error",
+              "No se pudo cargar la configuración guardada para esta materia."
+            );
+          }
+        } finally {
+          if (active) setLoading(false);
+        }
+      };
+
+      loadConfig();
+      return () => {
+        active = false;
+      };
+    }, [sessionSubjectId])
+  );
+
+  const startPomodoro = async () => {
     const err = validate();
     if (err) {
       Alert.alert("Revisa la configuración", err);
       return;
     }
 
-    const next = { focusTime, shortBreak, longBreak, cycles };
-    setConfig(next);
-    startWithConfig(next);
+    if (!sessionSubjectId) {
+      Alert.alert(
+        "Materia no seleccionada",
+        "Selecciona una materia antes de configurar el pomodoro."
+      );
+      return;
+    }
 
-    router.push("/(tabs)/Pomodoro/PomodoroScreen" as Href);
+    const numericId = Number(sessionSubjectId);
+    if (Number.isNaN(numericId)) {
+      Alert.alert(
+        "Materia inválida",
+        "No se pudo identificar la materia seleccionada."
+      );
+      return;
+    }
+
+    if (saving) return;
+
+    const next = { focusTime, shortBreak, longBreak, cycles };
+
+    try {
+      setSaving(true);
+      await upsertPomodoroConfigForSubject(numericId, {
+        focus: focusTime,
+        shortBreak,
+        longBreak,
+        cicle: cycles,
+      });
+
+      setConfig(next);
+      startWithConfig(next);
+
+      router.push("/(tabs)/Pomodoro/PomodoroScreen" as Href);
+    } catch (error) {
+      console.error("Error guardando config pomodoro:", error);
+      Alert.alert(
+        "Error",
+        "No se pudo guardar la configuración del pomodoro."
+      );
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
@@ -111,12 +207,16 @@ export default function PomodoroConfigForm() {
           <View style={styles.button}>
             <Pressable
               onPress={startPomodoro}
+              disabled={saving || loading}
               style={({ pressed }) => [
                 styles.customBtn,
                 pressed && { opacity: 0.85 },
+                (saving || loading) && { opacity: 0.6 },
               ]}
             >
-              <Text style={styles.customBtnText}>Comenzar Pomodoro</Text>
+              <Text style={styles.customBtnText}>
+                {saving ? "Guardando..." : "Comenzar Pomodoro"}
+              </Text>
             </Pressable>
           </View>
         </View>
