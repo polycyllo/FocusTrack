@@ -152,10 +152,14 @@ export default function SubjectCreateScreen() {
         .map(([key]) => {
           const di = Number(key) as DayIndex;
           const t = times[di];
+          const startISO = t.start?.toISOString()!;
+          const endISO = t.end?.toISOString()!;
+          const date = startISO.split("T")[0];
           return {
             day: di,
-            start: t.start?.toISOString()!,
-            end: t.end?.toISOString()!,
+            date,
+            start: startISO,
+            end: endISO,
           };
         });
 

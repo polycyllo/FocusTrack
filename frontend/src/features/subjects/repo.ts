@@ -7,7 +7,7 @@ export type CreateSubjectInput = {
   title: string;
   description?: string | null;
   color?: string | null;
-  schedules?: { day: number; start: string; end: string }[];
+  schedules?: { day: number; date: string; start: string; end: string }[];
 };
 
 export async function addSubjectWithSchedules(data: CreateSubjectInput) {
@@ -29,6 +29,7 @@ export async function addSubjectWithSchedules(data: CreateSubjectInput) {
       startTime: s.start,
       endTime: s.end,
       day: s.day,
+      date: s.date,
       status: 1,
       subjectId,
     }));
@@ -87,7 +88,7 @@ export async function updateSubjectWithSchedules(
     title?: string;
     description?: string | null;
     color?: string | null;
-    schedules?: { day: number; start: string; end: string }[];
+    schedules?: { day: number; date: string; start: string; end: string }[];
   }
 ) {
   //Actualizar datos de la materia
@@ -108,6 +109,7 @@ export async function updateSubjectWithSchedules(
       startTime: s.start,
       endTime: s.end,
       day: s.day,
+      date: s.date,
       status: 1,
       subjectId,
     }));
