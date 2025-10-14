@@ -15,12 +15,8 @@ import DateTimePicker, {
 } from "@react-native-community/datetimepicker";
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 
-// === NUEVO: importar el store para guardar ===
-import { useSubjectsStore } from "@/src/store/subjects.store";
-import type { Subject } from "@/src/store/subjects.store";
+import { addSubjectWithSchedules } from "@/src/features/subjects/repo";
 
-//nota: Buscar la manera de que cuando me equivoque al seleccionar la hora de un dia al
-//hacer clic otra vez sobre el dia reestablecer las hroas lo mismo para el nombre
 type DayIndex = 0 | 1 | 2 | 3 | 4 | 5 | 6;
 
 const DAY_LABELS: Record<DayIndex, string> = {
@@ -54,7 +50,7 @@ const COLORS = {
   red: "#E74C3C",
   green: "#27AE60",
 };
-// Modificar forma en la que esta ordenado no olvidarmeeee, definir que colores e iconos tendremos
+
 const COLOR_SWATCHES = ["#3567e7", "#e74c3c", "#f39c12", "#27ae60", "#8e44ad"];
 const ICON_OPTIONS = [
   { key: "book", node: <Ionicons name="book" size={22} /> },
@@ -73,9 +69,6 @@ type PickerState =
 
 export default function SubjectCreateScreen() {
   const router = useRouter();
-
-  // === NUEVO: acción del store ===
-  const addSubject = useSubjectsStore((s) => s.addSubject);
 
   // form state
   const [name, setName] = useState("");
@@ -136,7 +129,6 @@ export default function SubjectCreateScreen() {
         if (!t.start || !t.end) {
           return `Faltan horas para ${NICE_DAY[di]}.`;
         }
-        // === NUEVO: fin > inicio ===
         if (t.start && t.end && t.end <= t.start) {
           return `La hora de fin debe ser mayor que la de inicio para ${NICE_DAY[di]}.`;
         }
@@ -145,43 +137,42 @@ export default function SubjectCreateScreen() {
     return null;
   };
 
-  const onSave = () => {
+  //CAMBIO: Función async para guardar en DB
+  const onSave = async () => {
     const error = validate();
     if (error) {
       Alert.alert("Revisa el formulario", error);
       return;
     }
 
-    // base del payload igual a tu versión
-    const base = {
-      name: name.trim(),
-      color,
-      icon,
-      schedule: Object.entries(selectedDays)
+    try {
+      // Preparar schedules
+      const schedules = Object.entries(selectedDays)
         .filter(([_, isOn]) => isOn)
         .map(([key]) => {
           const di = Number(key) as DayIndex;
           const t = times[di];
           return {
             day: di,
-            start: t.start?.toISOString()!, // validado arriba
+            start: t.start?.toISOString()!,
             end: t.end?.toISOString()!,
           };
-        }),
-    };
+        });
 
-    // === NUEVO: id + createdAt y guardado en store ===
-    const id = `sub_${Date.now().toString(36)}_${Math.random()
-      .toString(36)
-      .slice(2, 6)}`;
-    const createdAt = new Date().toISOString();
+      // Guardar en la base de datos
+      await addSubjectWithSchedules({
+        title: name.trim(),
+        description: null,
+        color: color,
+        schedules: schedules,
+      });
 
-    const subject: Subject = { id, createdAt, ...base };
-
-    addSubject(subject); // persistido en AsyncStorage por el store
-
-    Alert.alert("Listo", "Materia creada.");
-    router.back(); // regresa a la lista de Materias
+      Alert.alert("Listo", "Materia creada exitosamente.");
+      router.back();
+    } catch (err) {
+      console.error("Error al guardar materia:", err);
+      Alert.alert("Error", "No se pudo guardar la materia.");
+    }
   };
 
   return (

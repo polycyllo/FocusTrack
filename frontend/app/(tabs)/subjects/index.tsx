@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import {
   View,
   Text,
@@ -6,16 +6,77 @@ import {
   StyleSheet,
   SafeAreaView,
   FlatList,
+  Alert,
 } from "react-native";
-import { useRouter, Href } from "expo-router";
+import { useRouter, Href, useFocusEffect } from "expo-router";
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
-import { useSubjectsStore } from "@/src/store/subjects.store";
-import type { Subject } from "@/src/store/subjects.store";
 import { usePomodoroStore } from "@/src/store/pomodoro.store";
+import { 
+  deleteSubjectWithSchedules, 
+  getAllSubjectsWithSchedules 
+} from "@/src/features/subjects/repo";
+import Animated, {
+  useSharedValue,
+  useAnimatedStyle,
+  withTiming,
+  cancelAnimation,
+  runOnJS,
+} from "react-native-reanimated";
+import { Gesture, GestureDetector } from "react-native-gesture-handler";
+
+// 👇 Tipo para las materias desde la DB
+type SubjectFromDB = {
+  subjectId?: number;
+  subject_id?: number; // variante según la DB
+  title: string;
+  description?: string | null;
+  color?: string | null;
+};
+
+type ScheduleFromDB = {
+  scheduleId?: number;
+  schedule_id?: number;
+  startTime: string | null;
+  start_time?: string | null;
+  endTime: string | null;
+  end_time?: string | null;
+  day: number | null;
+  status?: number | null;
+  subjectId?: number;
+  subject_id?: number;
+};
 
 export default function SubjectsScreen() {
   const router = useRouter();
-  const subjects = useSubjectsStore((s) => s.subjects);
+  const [subjects, setSubjects] = useState<
+    Array<{ subject: SubjectFromDB; schedules: ScheduleFromDB[] }>
+  >([]);
+  const [loading, setLoading] = useState(true);
+
+  // 👇 Función para cargar materias desde la DB
+  const loadSubjects = async () => {
+    try {
+      setLoading(true);
+      const data = await getAllSubjectsWithSchedules();
+      setSubjects(data);
+    } catch (error) {
+      console.error("Error cargando materias:", error);
+      Alert.alert("Error", "No se pudieron cargar las materias");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // 👇 Cargar al montar y cada vez que la pantalla reciba foco
+  useEffect(() => {
+    loadSubjects();
+  }, []);
+
+  useFocusEffect(
+    useCallback(() => {
+      loadSubjects();
+    }, [])
+  );
 
   const goCreate = () => router.push("/(tabs)/subjects/create" as Href);
 
@@ -38,7 +99,11 @@ export default function SubjectsScreen() {
         </View>
 
         {/* Body */}
-        {subjects.length === 0 ? (
+        {loading ? (
+          <View style={styles.emptyBody}>
+            <Text style={styles.emptyText}>Cargando...</Text>
+          </View>
+        ) : subjects.length === 0 ? (
           <View style={styles.emptyBody}>
             <Text style={styles.emptyText}>No hay materias creadas</Text>
           </View>
@@ -46,8 +111,12 @@ export default function SubjectsScreen() {
           <FlatList
             contentContainerStyle={{ padding: 12, paddingBottom: 20 }}
             data={subjects}
-            keyExtractor={(item) => item.id}
-            renderItem={({ item }) => <SubjectCard item={item} />}
+            keyExtractor={(item) => 
+              (item.subject.subjectId || item.subject.subject_id)?.toString() || ""
+            }
+            renderItem={({ item }) => (
+              <SubjectCard item={item} onDeleted={loadSubjects} />
+            )}
           />
         )}
       </View>
@@ -55,70 +124,193 @@ export default function SubjectsScreen() {
   );
 }
 
-function SubjectCard({ item }: { item: Subject }) {
+function SubjectCard({ 
+  item, 
+  onDeleted 
+}: { 
+  item: { subject: SubjectFromDB; schedules: ScheduleFromDB[] };
+  onDeleted: () => void;
+}) {
   const setSubject = usePomodoroStore((s) => s.setSubject);
   const router = useRouter();
 
+  const [deleting, setDeleting] = React.useState(false);
+
+  // Animación de llenado al mantener presionado
+  const fillProgress = useSharedValue(0);
+  const fillOpacity = useSharedValue(0);
+
+  const fillStyle = useAnimatedStyle(() => ({
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    borderRadius: 14,
+    backgroundColor: "rgba(255,255,255,0.4)",
+    transform: [{ scaleY: fillProgress.value }],
+    opacity: fillOpacity.value,
+  }));
+
+  // 👇 Gestura: mantener presionado para activar borrado
+  const longPressGesture = Gesture.LongPress()
+    .minDuration(1000)
+    .onStart(() => {
+      fillProgress.value = 0.01;
+      fillOpacity.value = 1;
+      fillProgress.value = withTiming(1, { duration: 1000 });
+    })
+    .onEnd((event, success) => {
+      if (success) {
+        runOnJS(setDeleting)(true);
+        fillOpacity.value = withTiming(0, { duration: 300 });
+      } else {
+        cancelAnimation(fillProgress);
+        fillOpacity.value = withTiming(0, { duration: 150 });
+      }
+    });
+
+  const confirmDelete = async () => {
+    const subjectId = item.subject.subjectId || item.subject.subject_id;
+    
+    Alert.alert(
+      "Confirmar eliminación",
+      `¿Eliminar la materia "${item.subject.title}"?`,
+      [
+        { text: "Cancelar", style: "cancel", onPress: () => setDeleting(false) },
+        {
+          text: "Eliminar",
+          style: "destructive",
+          onPress: async () => {
+            try {
+              if (subjectId) {
+                await deleteSubjectWithSchedules(subjectId);
+                Alert.alert("Éxito", "Materia eliminada");
+                onDeleted(); // Recargar lista
+              }
+            } catch (error) {
+              console.error("Error eliminando materia:", error);
+              Alert.alert("Error", "No se pudo eliminar la materia");
+            }
+          },
+        },
+      ]
+    );
+  };
+
+  const cancelDelete = () => setDeleting(false);
+
   const openPomodoroConfig = () => {
-    setSubject(item.id);
-    router.push("/(tabs)/Pomodoro/PomodoroConfigForm" as Href);
+    const subjectId = item.subject.subjectId || item.subject.subject_id;
+    if (subjectId) {
+      setSubject(subjectId.toString());
+      router.push("/(tabs)/Pomodoro/PomodoroConfigForm" as Href);
+    }
   };
 
   return (
-    <View style={styles.card}>
-      <View
-        style={[
-          styles.iconCircle,
-          { backgroundColor: item.color || "#70B1EA" },
-        ]}
-      >
-        {renderSubjectIcon(item.icon)}
-      </View>
+    <GestureDetector gesture={longPressGesture}>
+      <Animated.View style={styles.card}>
+        {/* Relleno animado */}
+        <Animated.View style={fillStyle} />
 
-      <View style={{ flex: 1 }}>
-        <Text numberOfLines={2} ellipsizeMode="tail" style={styles.cardTitle}>
-          {item.name}
-        </Text>
-      </View>
-
-      <View style={styles.actions}>
-        <Pressable
-          hitSlop={10}
-          style={styles.actionBtn}
-          onPress={openPomodoroConfig}
+        <View
+          style={{
+            flexDirection: "row",
+            alignItems: "center",
+            gap: 12,
+            flex: 1,
+          }}
         >
-          <MaterialCommunityIcons
-            name="timer-plus-outline"
-            size={18}
-            color="#fff"
-          />
-        </Pressable>
+          <View
+            style={[
+              styles.iconCircle,
+              { backgroundColor: item.subject.color || "#70B1EA" },
+            ]}
+          >
+            <Ionicons name="book" size={18} color="#fff" />
+          </View>
 
-        <Pressable hitSlop={10} style={styles.actionBtn} onPress={() => {}}>
-          <MaterialCommunityIcons
-            name="clipboard-check-multiple-outline"
-            size={18}
-            color="#fff"
-          />
-        </Pressable>
-      </View>
-    </View>
+          <View style={{ flex: 1 }}>
+            <Text
+              numberOfLines={2}
+              ellipsizeMode="tail"
+              style={styles.cardTitle}
+            >
+              {item.subject.title || "Sin nombre"}
+            </Text>
+            {item.schedules && item.schedules.length > 0 && (
+              <Text style={styles.scheduleText}>
+                {item.schedules.length} horario{item.schedules.length !== 1 ? "s" : ""}
+              </Text>
+            )}
+          </View>
+        </View>
+
+        <View style={styles.actions}>
+          {deleting ? (
+            <>
+              <Pressable
+                hitSlop={10}
+                style={[
+                  styles.actionBtn,
+                  { backgroundColor: "#e74c3c", borderColor: "#e74c3c" },
+                ]}
+                onPress={confirmDelete}
+              >
+                <MaterialCommunityIcons
+                  name="trash-can-outline"
+                  size={18}
+                  color="#fff"
+                />
+              </Pressable>
+
+              <Pressable
+                hitSlop={10}
+                style={[
+                  styles.actionBtn,
+                  { backgroundColor: "#95a5a6", borderColor: "#95a5a6" },
+                ]}
+                onPress={cancelDelete}
+              >
+                <MaterialCommunityIcons
+                  name="close-circle-outline"
+                  size={18}
+                  color="#fff"
+                />
+              </Pressable>
+            </>
+          ) : (
+            <>
+              <Pressable
+                hitSlop={10}
+                style={styles.actionBtn}
+                onPress={openPomodoroConfig}
+              >
+                <MaterialCommunityIcons
+                  name="timer-plus-outline"
+                  size={18}
+                  color="#fff"
+                />
+              </Pressable>
+
+              <Pressable
+                hitSlop={10}
+                style={styles.actionBtn}
+                onPress={() => {}}
+              >
+                <MaterialCommunityIcons
+                  name="clipboard-check-multiple-outline"
+                  size={18}
+                  color="#fff"
+                />
+              </Pressable>
+            </>
+          )}
+        </View>
+      </Animated.View>
+    </GestureDetector>
   );
-}
-
-function renderSubjectIcon(key: string) {
-  switch (key) {
-    case "book":
-      return <Ionicons name="book" size={18} color="#fff" />;
-    case "calculator":
-      return <Ionicons name="calculator" size={18} color="#fff" />;
-    case "flask":
-      return <Ionicons name="flask" size={18} color="#fff" />;
-    case "code-tags":
-      return <MaterialCommunityIcons name="code-tags" size={18} color="#fff" />;
-    default:
-      return <Ionicons name="bookmark" size={18} color="#fff" />;
-  }
 }
 
 const COLORS = {
@@ -134,7 +326,6 @@ const COLORS = {
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: COLORS.background },
   container: { flex: 1, backgroundColor: COLORS.background },
-
   header: {
     backgroundColor: COLORS.header,
     paddingHorizontal: 16,
@@ -153,14 +344,12 @@ const styles = StyleSheet.create({
     borderRadius: 10,
   },
   createBtnText: { color: "#fff", fontWeight: "600", fontSize: 12 },
-
   emptyBody: { flex: 1, alignItems: "center", justifyContent: "center" },
   emptyText: { color: "#0A0A0A", fontSize: 16, fontWeight: "700" },
-
   card: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 12,
+    justifyContent: "space-between",
     backgroundColor: COLORS.card,
     paddingHorizontal: 12,
     paddingVertical: 10,
@@ -171,6 +360,7 @@ const styles = StyleSheet.create({
     shadowRadius: 6,
     elevation: 2,
     marginBottom: 10,
+    overflow: "hidden",
   },
   iconCircle: {
     width: 38,
@@ -186,6 +376,11 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     fontSize: 15,
     lineHeight: 20,
+  },
+  scheduleText: {
+    color: "rgba(255,255,255,0.7)",
+    fontSize: 12,
+    marginTop: 2,
   },
   actions: { flexDirection: "row", gap: 8, marginLeft: 8 },
   actionBtn: {
