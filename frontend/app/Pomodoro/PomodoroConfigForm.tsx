@@ -46,7 +46,7 @@ export default function PomodoroConfigForm() {
     setConfig(next);
     startWithConfig(next);
 
-    router.push("/(tabs)/Pomodoro/PomodoroScreen" as Href);
+    router.push("/Pomodoro/PomodoroScreen" as Href);
   };
 
   return (

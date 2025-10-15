@@ -227,7 +227,7 @@ export default function PomodoroScreen() {
         <View style={styles.header}>
           <Pressable
             onPress={() =>
-              router.replace("/(tabs)/Pomodoro/PomodoroConfigForm" as Href)
+              router.replace("/Pomodoro/PomodoroConfigForm" as Href)
             }
             style={({ pressed }) => [styles.backBtn, pressed && styles.pressed]}
           >

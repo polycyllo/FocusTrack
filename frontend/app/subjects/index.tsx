@@ -78,7 +78,7 @@ export default function SubjectsScreen() {
     }, [])
   );
 
-  const goCreate = () => router.push("/(tabs)/subjects/create" as Href);
+  const goCreate = () => router.push("/subjects/create" as Href);
 
   return (
     <SafeAreaView style={styles.safe}>
@@ -204,7 +204,7 @@ function SubjectCard({
     const subjectId = item.subject.subjectId || item.subject.subject_id;
     if (subjectId) {
       setSubject(subjectId.toString());
-      router.push("/(tabs)/Pomodoro/PomodoroConfigForm" as Href);
+      router.push("/Pomodoro/PomodoroConfigForm" as Href);
     }
   };
 
