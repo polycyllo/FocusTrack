@@ -11,6 +11,7 @@ import {
 import { useRouter, Href, useFocusEffect } from "expo-router";
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import { usePomodoroStore } from "@/src/store/pomodoro.store";
+import { useAuthStore } from "@/src/store/auth.store";
 import { 
   deleteSubjectWithSchedules, 
   getAllSubjectsWithSchedules 
@@ -24,10 +25,9 @@ import Animated, {
 } from "react-native-reanimated";
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
 
-// 👇 Tipo para las materias desde la DB
 type SubjectFromDB = {
   subjectId?: number;
-  subject_id?: number; // variante según la DB
+  subject_id?: number;
   title: string;
   description?: string | null;
   color?: string | null;
@@ -48,12 +48,12 @@ type ScheduleFromDB = {
 
 export default function SubjectsScreen() {
   const router = useRouter();
-  const [subjects, setSubjects] = useState<
-    Array<{ subject: SubjectFromDB; schedules: ScheduleFromDB[] }>
-  >([]);
+  const { isAuthenticated, user, logout } = useAuthStore();
+  const [subjects, setSubjects] = useState<Array<{ subject: SubjectFromDB; schedules: ScheduleFromDB[] }>>([]);
   const [loading, setLoading] = useState(true);
 
-  // 👇 Función para cargar materias desde la DB
+  // NO bloqueamos el acceso, permitimos uso sin login
+
   const loadSubjects = async () => {
     try {
       setLoading(true);
@@ -67,7 +67,6 @@ export default function SubjectsScreen() {
     }
   };
 
-  // 👇 Cargar al montar y cada vez que la pantalla reciba foco
   useEffect(() => {
     loadSubjects();
   }, []);
@@ -80,22 +79,67 @@ export default function SubjectsScreen() {
 
   const goCreate = () => router.push("/(tabs)/subjects/create" as Href);
 
+  const handleAuthAction = () => {
+    if (isAuthenticated) {
+      // Si está logueado, mostrar opción de logout
+      Alert.alert(
+        "Cerrar sesión",
+        `¿Deseas cerrar sesión como ${user?.name}?`,
+        [
+          { text: "Cancelar", style: "cancel" },
+          {
+            text: "Cerrar sesión",
+            style: "destructive",
+            onPress: () => {
+              logout();
+              Alert.alert("Sesión cerrada", "Has cerrado sesión exitosamente");
+            },
+          },
+        ]
+      );
+    } else {
+      // Si no está logueado, ir a login
+      router.push("/auth/login" as Href);
+    }
+  };
+
   return (
     <SafeAreaView style={styles.safe}>
       <View style={styles.container}>
         {/* Header */}
         <View style={styles.header}>
-          <Text style={styles.headerTitle}>Materias</Text>
+          <View style={styles.headerLeft}>
+            <Text style={styles.headerTitle}>Materias</Text>
+            {isAuthenticated && user && (
+              <Text style={styles.userGreeting}>Hola, {user.name}</Text>
+            )}
+          </View>
 
-          <Pressable
-            onPress={goCreate}
-            style={({ pressed }) => [
-              styles.createBtn,
-              pressed && { opacity: 0.85 },
-            ]}
-          >
-            <Text style={styles.createBtnText}>+ Crear materia</Text>
-          </Pressable>
+          <View style={styles.headerButtons}>
+            <Pressable
+              onPress={goCreate}
+              style={({ pressed }) => [
+                styles.createBtn,
+                pressed && { opacity: 0.85 },
+              ]}
+            >
+              <Text style={styles.createBtnText}>+ Crear</Text>
+            </Pressable>
+
+            <Pressable
+              onPress={handleAuthAction}
+              style={({ pressed }) => [
+                styles.authBtn,
+                pressed && { opacity: 0.85 },
+              ]}
+            >
+              {isAuthenticated ? (
+                <Ionicons name="log-out-outline" size={20} color="#fff" />
+              ) : (
+                <Ionicons name="log-in-outline" size={20} color="#fff" />
+              )}
+            </Pressable>
+          </View>
         </View>
 
         {/* Body */}
@@ -105,7 +149,11 @@ export default function SubjectsScreen() {
           </View>
         ) : subjects.length === 0 ? (
           <View style={styles.emptyBody}>
+            <Ionicons name="book-outline" size={64} color="rgba(0,0,0,0.3)" />
             <Text style={styles.emptyText}>No hay materias creadas</Text>
+            <Text style={styles.emptySubtext}>
+              Toca "+ Crear" para agregar tu primera materia
+            </Text>
           </View>
         ) : (
           <FlatList
@@ -136,7 +184,6 @@ function SubjectCard({
 
   const [deleting, setDeleting] = React.useState(false);
 
-  // Animación de llenado al mantener presionado
   const fillProgress = useSharedValue(0);
   const fillOpacity = useSharedValue(0);
 
@@ -152,7 +199,6 @@ function SubjectCard({
     opacity: fillOpacity.value,
   }));
 
-  // 👇 Gestura: mantener presionado para activar borrado
   const longPressGesture = Gesture.LongPress()
     .minDuration(1000)
     .onStart(() => {
@@ -186,7 +232,7 @@ function SubjectCard({
               if (subjectId) {
                 await deleteSubjectWithSchedules(subjectId);
                 Alert.alert("Éxito", "Materia eliminada");
-                onDeleted(); // Recargar lista
+                onDeleted();
               }
             } catch (error) {
               console.error("Error eliminando materia:", error);
@@ -211,7 +257,6 @@ function SubjectCard({
   return (
     <GestureDetector gesture={longPressGesture}>
       <Animated.View style={styles.card}>
-        {/* Relleno animado */}
         <Animated.View style={fillStyle} />
 
         <View
@@ -334,7 +379,16 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "space-between",
   },
+  headerLeft: {
+    flex: 1,
+  },
   headerTitle: { color: "#fff", fontSize: 18, fontWeight: "600" },
+  userGreeting: { 
+    color: "rgba(255,255,255,0.8)", 
+    fontSize: 12, 
+    marginTop: 2 
+  },
+  headerButtons: { flexDirection: "row", gap: 8, alignItems: "center" },
   createBtn: {
     backgroundColor: COLORS.button,
     borderColor: COLORS.button,
@@ -344,8 +398,29 @@ const styles = StyleSheet.create({
     borderRadius: 10,
   },
   createBtnText: { color: "#fff", fontWeight: "600", fontSize: 12 },
-  emptyBody: { flex: 1, alignItems: "center", justifyContent: "center" },
-  emptyText: { color: "#0A0A0A", fontSize: 16, fontWeight: "700" },
+  authBtn: {
+    backgroundColor: "rgba(255,255,255,0.2)",
+    padding: 8,
+    borderRadius: 8,
+  },
+  emptyBody: { 
+    flex: 1, 
+    alignItems: "center", 
+    justifyContent: "center",
+    paddingHorizontal: 40,
+  },
+  emptyText: { 
+    color: "#0A0A0A", 
+    fontSize: 16, 
+    fontWeight: "700",
+    marginTop: 16,
+  },
+  emptySubtext: {
+    color: "rgba(0,0,0,0.6)",
+    fontSize: 14,
+    marginTop: 8,
+    textAlign: "center",
+  },
   card: {
     flexDirection: "row",
     alignItems: "center",
