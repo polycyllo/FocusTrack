@@ -1,19 +1,12 @@
-import React, { useState, useEffect, useCallback } from "react";
-import {
-  View,
-  Text,
-  Pressable,
-  StyleSheet,
-  SafeAreaView,
-  FlatList,
-  Alert,
-} from "react-native";
+import React, { useEffect, useCallback, useState } from "react";
+import { Alert, Pressable, StyleSheet, Text, View } from "react-native";
 import { useRouter, Href, useFocusEffect } from "expo-router";
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
+import { ListLayout } from "@/components/layouts/ListLayout";
 import { usePomodoroStore } from "@/src/store/pomodoro.store";
-import { 
-  deleteSubjectWithSchedules, 
-  getAllSubjectsWithSchedules 
+import {
+  deleteSubjectWithSchedules,
+  getAllSubjectsWithSchedules,
 } from "@/src/features/subjects/repo";
 import Animated, {
   useSharedValue,
@@ -44,6 +37,16 @@ type ScheduleFromDB = {
   status?: number | null;
   subjectId?: number;
   subject_id?: number;
+};
+
+const COLORS = {
+  background: "#9ECDF2",
+  header: "#4A90E2",
+  button: "#70B1EA",
+  card: "#4A90E2",
+  cardText: "#ffffff",
+  chipBg: "rgba(255,255,255,0.18)",
+  chipBorder: "rgba(255,255,255,0.28)",
 };
 
 export default function SubjectsScreen() {
@@ -81,46 +84,32 @@ export default function SubjectsScreen() {
   const goCreate = () => router.push("/(tabs)/subjects/create" as Href);
 
   return (
-    <SafeAreaView style={styles.safe}>
-      <View style={styles.container}>
-        {/* Header */}
-        <View style={styles.header}>
-          <Text style={styles.headerTitle}>Materias</Text>
-
-          <Pressable
-            onPress={goCreate}
-            style={({ pressed }) => [
-              styles.createBtn,
-              pressed && { opacity: 0.85 },
-            ]}
-          >
-            <Text style={styles.createBtnText}>+ Crear materia</Text>
-          </Pressable>
-        </View>
-
-        {/* Body */}
-        {loading ? (
-          <View style={styles.emptyBody}>
-            <Text style={styles.emptyText}>Cargando...</Text>
-          </View>
-        ) : subjects.length === 0 ? (
-          <View style={styles.emptyBody}>
-            <Text style={styles.emptyText}>No hay materias creadas</Text>
-          </View>
-        ) : (
-          <FlatList
-            contentContainerStyle={{ padding: 12, paddingBottom: 20 }}
-            data={subjects}
-            keyExtractor={(item) => 
-              (item.subject.subjectId || item.subject.subject_id)?.toString() || ""
-            }
-            renderItem={({ item }) => (
-              <SubjectCard item={item} onDeleted={loadSubjects} />
-            )}
-          />
-        )}
-      </View>
-    </SafeAreaView>
+    <ListLayout
+      title="Materias"
+      actionLabel="+ Crear materia"
+      onActionPress={goCreate}
+      data={subjects}
+      loading={loading}
+      renderItem={({ item }) => (
+        <SubjectCard item={item} onDeleted={loadSubjects} />
+      )}
+      keyExtractor={(item) =>
+        (item.subject.subjectId || item.subject.subject_id)?.toString() || ""
+      }
+      emptyMessage="No hay materias creadas"
+      loadingMessage="Cargando..."
+      colors={{
+        background: COLORS.background,
+        header: COLORS.header,
+        action: COLORS.button,
+        headerText: "#fff",
+        actionText: "#fff",
+        emptyText: "#0A0A0A",
+      }}
+      listProps={{
+        contentContainerStyle: { padding: 12, paddingBottom: 20 },
+      }}
+    />
   );
 }
 
@@ -313,39 +302,7 @@ function SubjectCard({
   );
 }
 
-const COLORS = {
-  background: "#9ECDF2",
-  header: "#4A90E2",
-  button: "#70B1EA",
-  card: "#4A90E2",
-  cardText: "#ffffff",
-  chipBg: "rgba(255,255,255,0.18)",
-  chipBorder: "rgba(255,255,255,0.28)",
-};
-
 const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: COLORS.background },
-  container: { flex: 1, backgroundColor: COLORS.background },
-  header: {
-    backgroundColor: COLORS.header,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-  },
-  headerTitle: { color: "#fff", fontSize: 18, fontWeight: "600" },
-  createBtn: {
-    backgroundColor: COLORS.button,
-    borderColor: COLORS.button,
-    borderWidth: 1,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 10,
-  },
-  createBtnText: { color: "#fff", fontWeight: "600", fontSize: 12 },
-  emptyBody: { flex: 1, alignItems: "center", justifyContent: "center" },
-  emptyText: { color: "#0A0A0A", fontSize: 16, fontWeight: "700" },
   card: {
     flexDirection: "row",
     alignItems: "center",
