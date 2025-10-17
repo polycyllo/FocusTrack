@@ -13,8 +13,9 @@ import { useRouter } from "expo-router";
 import DateTimePicker, {
   DateTimePickerEvent,
 } from "@react-native-community/datetimepicker";
-import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
+import { Ionicons } from "@expo/vector-icons";
 
+import { ColorIconPicker } from "@/components/forms/ColorIconPicker";
 import { addSubjectWithSchedules } from "@/src/features/subjects/repo";
 import {
   FORM_THEME,
@@ -258,48 +259,12 @@ export default function SubjectCreateScreen() {
           </View>
         )}
 
-        {/* Color / ícono */}
-        <View style={styles.section}>
-          <Text style={styles.label}>Color / ícono</Text>
-
-          <View style={[styles.rowBetween, { flexWrap: "wrap", gap: 10 }]}>
-            {/* Colores */}
-            <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 10 }}>
-              {COLOR_SWATCHES.map((c) => {
-                const selected = color === c;
-                return (
-                  <Pressable
-                    key={c}
-                    onPress={() => setColor(c)}
-                    style={[
-                      styles.swatch,
-                      {
-                        backgroundColor: c,
-                        borderColor: selected ? "#000" : "transparent",
-                      },
-                    ]}
-                  />
-                );
-              })}
-            </View>
-
-            {/* Iconos */}
-            <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 10 }}>
-              {ICON_OPTIONS.map((opt) => {
-                const selected = icon === opt.key;
-                return (
-                  <Pressable
-                    key={opt.key}
-                    onPress={() => setIcon(opt.key)}
-                    style={[styles.iconPick, selected && styles.iconPickOn]}
-                  >
-                    <Text>{opt.node}</Text>
-                  </Pressable>
-                );
-              })}
-            </View>
-          </View>
-        </View>
+        <ColorIconPicker
+          color={color}
+          onColorChange={setColor}
+          icon={icon}
+          onIconChange={setIcon}
+        />
 
         {/* Botones */}
         <View style={styles.footerBtns}>
@@ -419,32 +384,6 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   timeBtnText: { color: "#333", fontWeight: "600" },
-
-  rowBetween: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-  },
-
-  swatch: {
-    width: 28,
-    height: 28,
-    borderRadius: 16,
-    borderWidth: 2,
-  },
-  iconPick: {
-    width: 36,
-    height: 36,
-    borderRadius: 12,
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: "#fff",
-    borderWidth: 1,
-    borderColor: COLORS.border,
-  },
-  iconPickOn: {
-    borderColor: "#000",
-  },
 
   footerBtns: { flexDirection: "row", gap: 12, marginBottom: 20 },
   btn: {

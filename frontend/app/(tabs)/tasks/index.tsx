@@ -12,6 +12,7 @@ import {
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 
+import { ColorIconPicker } from "@/components/forms/ColorIconPicker";
 import {
   FORM_THEME,
   FORM_COLOR_SWATCHES,
@@ -46,6 +47,7 @@ export default function TaskCreateScreen() {
           <Text style={styles.label}>Nombre</Text>
           <TextInput
             placeholder="Nombre de la tarea"
+            placeholderTextColor="rgba(0,0,0,0.4)"
             style={styles.input}
             value={name}
             onChangeText={setName}
@@ -54,6 +56,7 @@ export default function TaskCreateScreen() {
           <Text style={styles.label}>Descripción</Text>
           <TextInput
             placeholder="Descripción de la tarea"
+            placeholderTextColor="rgba(0,0,0,0.4)"
             style={[styles.input, styles.inputMultiline]}
             multiline
             value={description}
@@ -61,37 +64,12 @@ export default function TaskCreateScreen() {
           />
         </View>
 
-        <View style={[styles.section, styles.sectionWithInset]}>
-          <Text style={styles.label}>Color/icono</Text>
-          <View style={styles.swatchRow}>
-            {FORM_COLOR_SWATCHES.map((swatch) => (
-              <Pressable
-                key={swatch}
-                onPress={() => setColor(swatch)}
-                style={[
-                  styles.swatch,
-                  { backgroundColor: swatch },
-                  color === swatch && styles.swatchSelected,
-                ]}
-              />
-            ))}
-          </View>
-
-          <View style={styles.iconRow}>
-            {FORM_ICON_OPTIONS.map((option) => (
-              <Pressable
-                key={option.key}
-                style={[
-                  styles.iconPick,
-                  icon === option.key && styles.iconPickOn,
-                ]}
-                onPress={() => setIcon(option.key)}
-              >
-                {option.node}
-              </Pressable>
-            ))}
-          </View>
-        </View>
+        <ColorIconPicker
+          color={color}
+          onColorChange={setColor}
+          icon={icon}
+          onIconChange={setIcon}
+        />
 
         <View style={styles.footerBtns}>
           <Pressable
@@ -147,44 +125,9 @@ const styles = StyleSheet.create({
     borderColor: COLORS.border,
     color: COLORS.text,
   },
-  sectionWithInset: {
-    gap: 18,
-  },
   inputMultiline: {
     minHeight: 90,
     textAlignVertical: "top",
-  },
-  swatchRow: {
-    flexDirection: "row",
-    gap: 12,
-  },
-  swatch: {
-    width: 32,
-    height: 32,
-    borderRadius: 18,
-    borderWidth: 2,
-    borderColor: "transparent",
-  },
-  swatchSelected: {
-    borderColor: "#000",
-  },
-  iconRow: {
-    flexDirection: "row",
-    gap: 12,
-    marginTop: 12,
-  },
-  iconPick: {
-    width: 44,
-    height: 44,
-    borderRadius: 12,
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: "#fff",
-    borderWidth: 1,
-    borderColor: COLORS.border,
-  },
-  iconPickOn: {
-    borderColor: "#000",
   },
   footerBtns: { flexDirection: "row", gap: 12, marginBottom: 20 },
   btn: {
