@@ -16,6 +16,11 @@ import DateTimePicker, {
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 
 import { addSubjectWithSchedules } from "@/src/features/subjects/repo";
+import {
+  FORM_THEME,
+  FORM_COLOR_SWATCHES,
+  FORM_ICON_OPTIONS,
+} from "@/src/constants/formStyles";
 
 type DayIndex = 0 | 1 | 2 | 3 | 4 | 5 | 6;
 
@@ -39,28 +44,9 @@ const NICE_DAY: Record<DayIndex, string> = {
   6: "Domingo",
 };
 
-const COLORS = {
-  background: "#9ECDF2",
-  header: "#4A90E2",
-  card: "#E5F2FD",
-  text: "#0A0A0A",
-  chipOn: "#2D6CDF",
-  chipOff: "rgba(0,0,0,0.08)",
-  border: "rgba(0,0,0,0.12)",
-  red: "#E74C3C",
-  green: "#27AE60",
-};
-
-const COLOR_SWATCHES = ["#3567e7", "#e74c3c", "#f39c12", "#27ae60", "#8e44ad"];
-const ICON_OPTIONS = [
-  { key: "book", node: <Ionicons name="book" size={22} /> },
-  { key: "calculator", node: <Ionicons name="calculator" size={22} /> },
-  { key: "flask", node: <Ionicons name="flask" size={22} /> },
-  {
-    key: "code-tags",
-    node: <MaterialCommunityIcons name="code-tags" size={22} />,
-  },
-];
+const COLORS = FORM_THEME;
+const COLOR_SWATCHES = FORM_COLOR_SWATCHES;
+const ICON_OPTIONS = FORM_ICON_OPTIONS;
 
 type TimeKind = "start" | "end";
 type PickerState =
