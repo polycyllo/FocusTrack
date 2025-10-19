@@ -144,7 +144,7 @@ export default function LoginScreen() {
           <View style={styles.footer}>
             <Text style={styles.footerText}>¿No tienes cuenta?</Text>
             <Pressable 
-              onPress={() => router.push('/auth/register')}
+              onPress={() => router.push('./auth/register')}
               disabled={isLoading}
             >
               <Text style={styles.footerLink}>Regístrate aquí</Text>

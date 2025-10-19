@@ -25,41 +25,53 @@ export default function RegisterScreen() {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   const handleRegister = async () => {
-    // Validaciones
-    if (!username.trim()) {
-      Alert.alert('Error', 'Por favor ingresa un nombre de usuario');
-      return;
-    }
-    if (username.length < 3) {
-      Alert.alert('Error', 'El nombre de usuario debe tener al menos 3 caracteres');
-      return;
-    }
-    if (!password) {
-      Alert.alert('Error', 'Por favor ingresa una contraseña');
-      return;
-    }
-    if (password.length < 6) {
-      Alert.alert('Error', 'La contraseña debe tener al menos 6 caracteres');
-      return;
-    }
-    if (password !== confirmPassword) {
-      Alert.alert('Error', 'Las contraseñas no coinciden');
-      return;
-    }
+  // Validaciones
+  if (!username.trim()) {
+    Alert.alert('Error', 'Por favor ingresa un nombre de usuario');
+    return;
+  }
+  if (username.length < 3) {
+    Alert.alert('Error', 'El nombre de usuario debe tener al menos 3 caracteres');
+    return;
+  }
+  if (!password) {
+    Alert.alert('Error', 'Por favor ingresa una contraseña');
+    return;
+  }
+  if (password.length < 6) {
+    Alert.alert('Error', 'La contraseña debe tener al menos 6 caracteres');
+    return;
+  }
 
-    const result = await register({ username, password });
+  // validación de seguridad
+  const passwordRegex = /^(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]).+$/;
+  if (!passwordRegex.test(password)) {
+    Alert.alert(
+      'Contraseña insegura',
+      'La contraseña debe contener al menos una letra mayúscula, un número y un carácter especial.'
+    );
+    return;
+  }
 
-    if (result.success) {
-      Alert.alert('Éxito', 'Cuenta creada exitosamente', [
-        {
-          text: 'OK',
-          onPress: () => router.replace('/auth/login'),
-        },
-      ]);
-    } else {
-      Alert.alert('Error', result.error || 'Error al registrar usuario');
-    }
-  };
+  if (password !== confirmPassword) {
+    Alert.alert('Error', 'Las contraseñas no coinciden');
+    return;
+  }
+
+  const result = await register({ username, password });
+
+  if (result.success) {
+    Alert.alert('Éxito', 'Cuenta creada exitosamente', [
+      {
+        text: 'OK',
+        onPress: () => router.replace('/auth/login'),
+      },
+    ]);
+  } else {
+    Alert.alert('Error', result.error || 'Error al registrar usuario');
+  }
+};
+
 
   return (
     <SafeAreaView style={styles.container}>
@@ -193,7 +205,7 @@ export default function RegisterScreen() {
           <View style={styles.footer}>
             <Text style={styles.footerText}>¿Ya tienes cuenta?</Text>
             <Pressable 
-              onPress={() => router.push('/auth/login')}
+              onPress={() => router.push('./auth/login')}
               disabled={isLoading}
             >
               <Text style={styles.footerLink}>Inicia sesión aquí</Text>
