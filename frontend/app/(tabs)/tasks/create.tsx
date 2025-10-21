@@ -50,15 +50,22 @@ export default function TaskCreateScreen() {
       return;
     }
 
+    const payload = {
+      title: name.trim(),
+      description: description.trim() ? description.trim() : null,
+      color,
+      icon,
+      subjectId,
+    };
+
     try {
       setSaving(true);
-      await addTask({
-        title: name.trim(),
-        description: description.trim() ? description.trim() : null,
-        color,
-        icon,
-        subjectId,
-      });
+      await addTask(payload);
+
+      setName("");
+      setDescription("");
+      setColor(FORM_COLOR_SWATCHES[0]);
+      setIcon(FORM_ICON_OPTIONS[0].key);
 
       router.replace({
         pathname: "/(tabs)/tasks",
@@ -119,7 +126,15 @@ export default function TaskCreateScreen() {
         <View style={styles.footerBtns}>
           <Pressable
             style={[styles.btn, styles.btnCancel]}
-            onPress={() => router.back()}
+            onPress={() =>
+              router.replace({
+                pathname: "/(tabs)/tasks",
+                params: {
+                  subjectId: subjectIdParam,
+                  subjectTitle: subjectTitle ?? "",
+                },
+              })
+            }
             disabled={saving}
           >
             <Text style={styles.btnText}>Cancelar</Text>
