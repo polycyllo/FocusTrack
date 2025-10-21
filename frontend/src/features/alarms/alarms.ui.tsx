@@ -6,7 +6,6 @@ import {
   Modal,
   StyleSheet,
   FlatList,
-  Alert,
   Platform,
 } from "react-native";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
@@ -14,7 +13,7 @@ import DateTimePicker from "@react-native-community/datetimepicker";
 import { Audio, AVPlaybackStatusSuccess } from "expo-av";
 import { TONES } from "./tones.catalog";
 import { Alarm } from "../../types/alarms";
-import { DAYS, DAY_LABEL, toHHmm } from "../../utils/time";
+import { DAYS, DAY_LABEL, toHHmm, compareTimeAsc } from "../../utils/time";
 
 const COLORS = {
   bg: "#D4F3EE",
@@ -50,13 +49,32 @@ export const AlarmCard: React.FC<{
   onDelete: () => void;
 }> = ({ alarm, onToggle, onEdit, onDelete }) => {
   const isActive = alarm.active;
-  const iconName = isActive ? "bell" : "bell-outline";
-  const sub =
-    alarm.repeatType === "custom"
+
+  const customByDay = (alarm as any).customByDay as
+    | Record<string, string[]>
+    | undefined;
+
+  const sub = useMemo(() => {
+    if (customByDay && Object.keys(customByDay).length) {
+      const keys = Object.keys(customByDay);
+      const sample = keys
+        .slice(0, 2)
+        .map((d) => `${d}: ${customByDay[d].slice(0, 1).join(",")}`)
+        .join(" · ");
+      return `Personalizada por día${sample ? " — " + sample : ""}`;
+    }
+    return alarm.repeatType === "custom"
       ? `Repite: ${(alarm.repeatDays ?? []).map((d) => DAY_LABEL[d]).join("-")}`
       : `Repite: ${alarm.repeatType === "daily" ? "Diario" : "Única vez"}`;
+  }, [alarm, customByDay]);
 
-  const displayTime = alarm.time ?? alarm.times?.[0] ?? "--:--";
+  const displayTime = useMemo(() => {
+    if (customByDay && Object.keys(customByDay).length) {
+      const all = Object.values(customByDay).flat();
+      if (all.length) return [...all].sort(compareTimeAsc)[0];
+    }
+    return alarm.time ?? alarm.times?.[0] ?? "--:--";
+  }, [alarm, customByDay]);
 
   return (
     <View style={styles.card}>
@@ -65,7 +83,7 @@ export const AlarmCard: React.FC<{
         style={{ paddingRight: 10 }}
       >
         <MaterialCommunityIcons
-          name={isActive ? "bell-ring" : iconName}
+          name={isActive ? "bell-ring" : "bell-outline"}
           size={26}
           color={COLORS.primaryDark}
         />
@@ -148,7 +166,7 @@ export const DaySelector: React.FC<{
   );
 };
 
-/* -------------------- TimeRow (1 hora) -------------------- */
+/* -------------------- TimeRow -------------------- */
 export const TimeRow: React.FC<{
   value: string;
   onChange: (hhmm: string) => void;
@@ -183,7 +201,9 @@ export const TimeRow: React.FC<{
           onChange={(_, d) => {
             setShow(false);
             if (!d) return;
-            onChange(toHHmm(d));
+            const hh = d.getHours().toString().padStart(2, "0");
+            const mm = d.getMinutes().toString().padStart(2, "0");
+            onChange(`${hh}:${mm}`);
           }}
         />
       )}
@@ -191,7 +211,7 @@ export const TimeRow: React.FC<{
   );
 };
 
-/* -------------------- MultiTimes (varias horas) -------------------- */
+/* -------------------- MultiTimes -------------------- */
 export const MultiTimes: React.FC<{
   values: string[];
   onChange: (times: string[]) => void;
@@ -245,10 +265,8 @@ export const TonePicker: React.FC<{
       }
       const { sound } = await Audio.Sound.createAsync(tone.file);
       soundRef.current = sound;
-      const status = (await sound.playAsync()) as AVPlaybackStatusSuccess;
-    } catch (e) {
-      // si falta archivo, no romper
-    }
+      await sound.playAsync();
+    } catch {}
   };
 
   return (
@@ -260,7 +278,6 @@ export const TonePicker: React.FC<{
         contentContainerStyle={{ gap: 8 }}
         showsHorizontalScrollIndicator={false}
         renderItem={({ item }) => {
-          // ignora items sin archivo disponible
           if (!item.file) return null;
           const active = item.key === value;
           return (

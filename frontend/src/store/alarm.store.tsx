@@ -2,18 +2,16 @@ import React, {
   createContext,
   useCallback,
   useContext,
-  useEffect,
   useMemo,
   useState,
 } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { Alarm, AlarmInput, AlarmType, RepeatType } from "../types/alarms";
-import { DAYS, compareTimeAsc, toHHmm } from "../utils/time";
+import { Alarm, AlarmInput, AlarmType } from "../types/alarms";
+import { DAYS, compareTimeAsc } from "../utils/time";
 
 const KEY_LIST = "@app/alarms:list";
 const KEY_LAST_TONE = "@app/alarms:lastTone";
 
-// ---- helpers ----
 const uuid = () =>
   "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, (c) => {
     const r = (Math.random() * 16) | 0,
@@ -21,16 +19,32 @@ const uuid = () =>
     return v.toString(16);
   });
 
+// obtiene la primera hora (mínima) de una alarma para ordenación
+function firstTimeOf(
+  alarm: Alarm | (Alarm & { customByDay?: Record<string, string[]> })
+) {
+  if ((alarm as any).customByDay) {
+    const map = (alarm as any).customByDay as Record<string, string[]>;
+    const all = Object.values(map).flat();
+    if (all.length > 0) {
+      return all.sort(compareTimeAsc)[0];
+    }
+  }
+  return alarm.time ?? alarm.times?.[0] ?? "00:00";
+}
+
 function orderedByActivesAndTime(alarms: Alarm[]) {
   return [...alarms].sort((a, b) => {
     if (a.active !== b.active) return a.active ? -1 : 1;
-    const ta = a.time ?? a.times?.[0] ?? "00:00";
-    const tb = b.time ?? b.times?.[0] ?? "00:00";
+    const ta = firstTimeOf(a as any);
+    const tb = firstTimeOf(b as any);
     return compareTimeAsc(ta, tb);
   });
 }
 
-function validate(input: AlarmInput) {
+function validate(
+  input: AlarmInput & { customByDay?: Record<string, string[]> | null }
+) {
   if (!input.title?.trim()) throw new Error("El título es requerido.");
   if (!["subject", "task", "other"].includes(input.type))
     throw new Error("Tipo inválido.");
@@ -41,20 +55,43 @@ function validate(input: AlarmInput) {
     if (!input.date) throw new Error("Fecha requerida para “una sola vez”.");
     if (!input.time) throw new Error("Hora requerida para “una sola vez”.");
   }
+
   if (input.repeatType === "daily") {
     if (!input.time) throw new Error("Hora requerida para “diaria”.");
   }
+
   if (input.repeatType === "custom") {
-    if (!input.repeatDays || input.repeatDays.length === 0)
-      throw new Error("Selecciona al menos un día.");
-    if (!input.times || input.times.length === 0)
-      throw new Error("Agrega al menos una hora.");
-    const invalid = input.repeatDays.some((d) => !DAYS.includes(d as any));
-    if (invalid) throw new Error("Día inválido.");
+    const hasLegacy = !!(
+      input.repeatDays &&
+      input.repeatDays.length &&
+      input.times &&
+      input.times.length
+    );
+    const hasMap = !!(
+      input.customByDay && Object.keys(input.customByDay).length
+    );
+
+    if (!hasLegacy && !hasMap) {
+      throw new Error("Configura los días/horas para “personalizada”.");
+    }
+
+    if (hasLegacy) {
+      const invalid = input.repeatDays!.some((d) => !DAYS.includes(d as any));
+      if (invalid) throw new Error("Día inválido.");
+    }
+
+    if (hasMap) {
+      // Validar que días sean válidos y que cada día tenga al menos una hora
+      for (const d of Object.keys(input.customByDay!)) {
+        if (!DAYS.includes(d as any)) throw new Error(`Día inválido (${d}).`);
+        const arr = input.customByDay![d];
+        if (!arr || !arr.length)
+          throw new Error(`Agrega al menos una hora para ${d}.`);
+      }
+    }
   }
 }
 
-// ---- contexto/store ----
 type Ctx = {
   alarms: Alarm[];
   loading: boolean;
@@ -66,8 +103,13 @@ type Ctx = {
   listByType: (type: AlarmType) => Alarm[];
   getById: (id: string) => Alarm | undefined;
 
-  create: (input: AlarmInput) => Promise<Alarm>;
-  update: (id: string, patch: Partial<Alarm>) => Promise<Alarm>;
+  create: (
+    input: AlarmInput & { customByDay?: Record<string, string[]> | null }
+  ) => Promise<Alarm>;
+  update: (
+    id: string,
+    patch: Partial<Alarm> & { customByDay?: Record<string, string[]> | null }
+  ) => Promise<Alarm>;
   toggleActive: (id: string, active: boolean) => Promise<void>;
   remove: (id: string) => Promise<void>;
 
@@ -100,9 +142,8 @@ export const AlarmsProvider: React.FC<{ children: React.ReactNode }> = ({
         const parsed: Alarm[] = JSON.parse(raw);
         setAlarms(orderedByActivesAndTime(parsed));
       } else {
-        // seed
         const now = new Date();
-        const base: Alarm[] = [
+        const base: (Alarm & { customByDay?: Record<string, string[]> })[] = [
           {
             id: uuid(),
             title: "Clase de Cálculo",
@@ -111,6 +152,24 @@ export const AlarmsProvider: React.FC<{ children: React.ReactNode }> = ({
             repeatDays: ["L", "M", "X", "J", "V"],
             times: ["08:00"],
             tone: "bell",
+            vibration: true,
+            active: true,
+            createdAt: now.toISOString(),
+            date: null,
+            time: null,
+          },
+          {
+            id: uuid(),
+            title: "Entrenamiento variable",
+            type: "other",
+            repeatType: "custom",
+            repeatDays: null,
+            times: null,
+            customByDay: {
+              L: ["07:30"],
+              S: ["10:00", "18:00"],
+            },
+            tone: "chime",
             vibration: true,
             active: true,
             createdAt: now.toISOString(),
@@ -133,23 +192,9 @@ export const AlarmsProvider: React.FC<{ children: React.ReactNode }> = ({
             active: true,
             createdAt: now.toISOString(),
           },
-          {
-            id: uuid(),
-            title: "Descanso corto",
-            type: "other",
-            repeatType: "daily",
-            time: "16:00",
-            date: null,
-            times: null,
-            repeatDays: null,
-            tone: "chime",
-            vibration: false,
-            active: false,
-            createdAt: now.toISOString(),
-          },
-        ];
-        setAlarms(orderedByActivesAndTime(base));
-        await persist(base);
+        ] as any;
+        setAlarms(orderedByActivesAndTime(base as any));
+        await persist(base as any);
       }
       if (last) setLastToneState(last);
     } catch (e: any) {
@@ -170,10 +215,12 @@ export const AlarmsProvider: React.FC<{ children: React.ReactNode }> = ({
   );
 
   const create = useCallback(
-    async (input: AlarmInput) => {
+    async (
+      input: AlarmInput & { customByDay?: Record<string, string[]> | null }
+    ) => {
       validate(input);
       const now = new Date().toISOString();
-      const alarm: Alarm = { id: uuid(), createdAt: now, ...input };
+      const alarm: Alarm = { id: uuid(), createdAt: now, ...(input as any) };
       const next = orderedByActivesAndTime([...alarms, alarm]);
       setAlarms(next);
       await persist(next);
@@ -183,24 +230,28 @@ export const AlarmsProvider: React.FC<{ children: React.ReactNode }> = ({
   );
 
   const update = useCallback(
-    async (id: string, patch: Partial<Alarm>) => {
+    async (
+      id: string,
+      patch: Partial<Alarm> & { customByDay?: Record<string, string[]> | null }
+    ) => {
       const idx = alarms.findIndex((a) => a.id === id);
       if (idx < 0) throw new Error("No existe la alarma");
-      const merged: Alarm = { ...alarms[idx], ...patch };
-      // Validar con el tipo actual
+      const merged: Alarm = { ...alarms[idx], ...(patch as any) };
+
       validate({
-        title: merged.title,
-        type: merged.type,
-        linkedId: merged.linkedId,
-        repeatType: merged.repeatType,
-        date: merged.date!,
-        time: merged.time!,
-        times: merged.times!,
-        repeatDays: merged.repeatDays!,
-        tone: merged.tone,
-        vibration: merged.vibration,
-        active: merged.active,
-      } as any);
+        title: (merged as any).title,
+        type: (merged as any).type,
+        linkedId: (merged as any).linkedId,
+        repeatType: (merged as any).repeatType,
+        date: (merged as any).date,
+        time: (merged as any).time,
+        times: (merged as any).times,
+        repeatDays: (merged as any).repeatDays,
+        tone: (merged as any).tone,
+        vibration: (merged as any).vibration,
+        active: (merged as any).active,
+        customByDay: (merged as any).customByDay ?? null,
+      });
 
       const next = [...alarms];
       next[idx] = merged;
