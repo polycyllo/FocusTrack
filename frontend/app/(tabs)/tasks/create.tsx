@@ -82,7 +82,7 @@ export default function TaskCreateScreen() {
           <Ionicons name="chevron-back" size={22} color="#fff" />
         </Pressable>
         <Text style={styles.headerTitle}>
-          Crear Tarea{subjectTitle ? ` · ${subjectTitle}` : ""}
+          Crear Tarea{subjectTitle ? ` - ${subjectTitle}` : ""}
         </Text>
         <View style={{ width: 22 }} />
       </View>
@@ -98,9 +98,9 @@ export default function TaskCreateScreen() {
             onChangeText={setName}
           />
 
-          <Text style={styles.label}>Descripción</Text>
+          <Text style={styles.label}>Descripcion</Text>
           <TextInput
-            placeholder="Descripción de la tarea"
+            placeholder="Descripcion de la tarea"
             placeholderTextColor="rgba(0,0,0,0.4)"
             style={[styles.input, styles.inputMultiline]}
             multiline

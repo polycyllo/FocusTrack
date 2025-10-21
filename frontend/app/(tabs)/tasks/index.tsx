@@ -1,10 +1,6 @@
 import React, { useCallback, useMemo, useState } from "react";
-import { Alert, Pressable } from "react-native";
-import {
-  useFocusEffect,
-  useLocalSearchParams,
-  useRouter,
-} from "expo-router";
+import { Alert, Pressable, View } from "react-native";
+import { useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 
 import { ListLayout } from "@/components/layouts/ListLayout";
@@ -13,7 +9,11 @@ import {
   SUBJECT_CARD_COLORS,
   subjectCardStyles,
 } from "@/components/cards/SubjectCardLayout";
-import { getTasksBySubject } from "@/src/features/tasks/repo";
+import {
+  getTasksBySubject,
+  updateTaskStatus,
+} from "@/src/features/tasks/repo";
+import { usePomodoroStore } from "@/src/store/pomodoro.store";
 import { FORM_ICON_OPTIONS } from "@/src/constants/formStyles";
 
 type TaskRow = {
@@ -23,6 +23,7 @@ type TaskRow = {
   description?: string | null;
   color?: string | null;
   icon?: string | null;
+  status?: number | null;
 };
 
 const SCREEN_COLORS = {
@@ -33,18 +34,20 @@ const SCREEN_COLORS = {
 };
 
 export default function TasksListScreen() {
+  const setSubject = usePomodoroStore((s) => s.setSubject);
   const router = useRouter();
   const { subjectId: subjectIdParam, subjectTitle } = useLocalSearchParams<{
     subjectId?: string;
     subjectTitle?: string;
   }>();
+
   const subjectId = subjectIdParam ? Number(subjectIdParam) : null;
 
   const [tasks, setTasks] = useState<TaskRow[]>([]);
   const [loading, setLoading] = useState(true);
 
   const headerTitle = useMemo(
-    () => (subjectTitle ? `Tareas · ${subjectTitle}` : "Tareas"),
+    () => (subjectTitle ? `Tareas - ${subjectTitle}` : "Tareas"),
     [subjectTitle]
   );
 
@@ -91,6 +94,30 @@ export default function TasksListScreen() {
     });
   };
 
+  const openPomodoro = () => {
+    if (!subjectId) {
+      Alert.alert("Materia requerida", "No se pudo identificar la materia.");
+      return;
+    }
+    setSubject(String(subjectId));
+    router.push("/(tabs)/Pomodoro/PomodoroConfigForm");
+  };
+
+  const toggleTaskStatus = async (
+    taskId: number,
+    currentStatus?: number | null
+  ) => {
+    if (!taskId) return;
+    try {
+      const nextStatus: 0 | 1 = currentStatus === 1 ? 0 : 1;
+      await updateTaskStatus(taskId, nextStatus);
+      await loadTasks();
+    } catch (error) {
+      console.error("No se pudo actualizar la tarea:", error);
+      Alert.alert("Error", "No se pudo actualizar el estado de la tarea.");
+    }
+  };
+
   return (
     <ListLayout
       title={headerTitle}
@@ -99,7 +126,12 @@ export default function TasksListScreen() {
       data={tasks}
       loading={loading}
       renderItem={({ item }) => (
-        <TaskCard item={item} subjectTitle={subjectTitle ?? ""} />
+        <TaskCard
+          item={item}
+          subjectTitle={subjectTitle ?? ""}
+          onOpenPomodoro={openPomodoro}
+          onToggleStatus={toggleTaskStatus}
+        />
       )}
       keyExtractor={(item, index) =>
         (item.taskId ?? item.task_id ?? index).toString()
@@ -127,9 +159,13 @@ export default function TasksListScreen() {
 function TaskCard({
   item,
   subjectTitle,
+  onOpenPomodoro,
+  onToggleStatus,
 }: {
   item: TaskRow;
   subjectTitle?: string;
+  onOpenPomodoro: () => void;
+  onToggleStatus: (taskId: number, status?: number | null) => void;
 }) {
   const iconNode =
     FORM_ICON_OPTIONS.find((opt) => opt.key === item.icon)?.node ?? (
@@ -140,6 +176,17 @@ function TaskCard({
     item.description?.trim() ||
     (subjectTitle ? `Materia: ${subjectTitle}` : undefined);
 
+  const id = item.taskId ?? item.task_id ?? 0;
+  const completed = item.status === 1;
+  const statusDotStyle = {
+    width: 18,
+    height: 18,
+    borderRadius: 9,
+    backgroundColor: completed ? "#27AE60" : "#fff",
+    borderWidth: 2,
+    borderColor: completed ? "#1e874c" : "#333",
+  };
+
   return (
     <SubjectCardLayout
       circleColor={item.color || SUBJECT_CARD_COLORS.iconFallback}
@@ -148,19 +195,21 @@ function TaskCard({
       subtitle={subtitle}
       actions={
         <>
-          <Pressable style={subjectCardStyles.actionBtn} onPress={() => {}}>
+          <Pressable
+            style={subjectCardStyles.actionBtn}
+            onPress={onOpenPomodoro}
+          >
             <MaterialCommunityIcons
-              name="check-circle-outline"
+              name="timer-plus-outline"
               size={18}
               color="#fff"
             />
           </Pressable>
-          <Pressable style={subjectCardStyles.actionBtn} onPress={() => {}}>
-            <MaterialCommunityIcons
-              name="trash-can-outline"
-              size={18}
-              color="#fff"
-            />
+          <Pressable
+            style={subjectCardStyles.actionBtn}
+            onPress={() => onToggleStatus(id, item.status)}
+          >
+            <View style={statusDotStyle} />
           </Pressable>
         </>
       }

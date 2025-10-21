@@ -40,3 +40,9 @@ export async function getTasksBySubject(subjectId: number) {
 
   return rows;
 }
+
+
+export async function updateTaskStatus(taskId: number, status: 0 | 1) {
+  await db.update(task).set({ status } as any).where(eq(task.taskId, taskId));
+}
+
