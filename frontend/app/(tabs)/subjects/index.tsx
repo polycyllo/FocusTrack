@@ -286,7 +286,7 @@ function SubjectCard({
               <Pressable
                 hitSlop={10}
                 style={styles.actionBtn}
-                onPress={() => {}}
+                onPress={() => { const sid = String(item.subject.subjectId ?? item.subject.subject_id ?? ""); const title = item.subject.title || ""; router.push({ pathname: "/(tabs)/tasks", params: { subjectId: sid, subjectTitle: title } }); }}
               >
                 <MaterialCommunityIcons
                   name="clipboard-check-multiple-outline"
