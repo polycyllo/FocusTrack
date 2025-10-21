@@ -10,7 +10,7 @@ import {
   View,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import { useRouter } from "expo-router";
+import { useLocalSearchParams, useRouter } from "expo-router";
 
 import { ColorIconPicker } from "@/components/forms/ColorIconPicker";
 import {
@@ -18,19 +18,62 @@ import {
   FORM_COLOR_SWATCHES,
   FORM_ICON_OPTIONS,
 } from "@/src/constants/formStyles";
+import { addTask } from "@/src/features/tasks/repo";
 
 const COLORS = FORM_THEME;
 
 export default function TaskCreateScreen() {
   const router = useRouter();
+  const { subjectId: subjectIdParam, subjectTitle } = useLocalSearchParams<{
+    subjectId?: string;
+    subjectTitle?: string;
+  }>();
 
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [color, setColor] = useState(FORM_COLOR_SWATCHES[0]);
   const [icon, setIcon] = useState(FORM_ICON_OPTIONS[0].key);
+  const [saving, setSaving] = useState(false);
+  const subjectId = subjectIdParam ? Number(subjectIdParam) : null;
 
-  const onSave = () =>
-    Alert.alert("Guardar tarea", "La funcionalidad estará disponible pronto.");
+  const onSave = async () => {
+    if (!subjectId) {
+      Alert.alert(
+        "Materia requerida",
+        "No se pudo identificar la materia asociada para esta tarea."
+      );
+      return;
+    }
+
+    if (!name.trim()) {
+      Alert.alert("Campo obligatorio", "El nombre de la tarea es requerido.");
+      return;
+    }
+
+    try {
+      setSaving(true);
+      await addTask({
+        title: name.trim(),
+        description: description.trim() ? description.trim() : null,
+        color,
+        icon,
+        subjectId,
+      });
+
+      router.replace({
+        pathname: "/(tabs)/tasks",
+        params: {
+          subjectId: subjectIdParam,
+          subjectTitle: subjectTitle ?? "",
+        },
+      });
+    } catch (error) {
+      console.error("Error guardando tarea:", error);
+      Alert.alert("Error", "No se pudo guardar la tarea. Intenta de nuevo.");
+    } finally {
+      setSaving(false);
+    }
+  };
 
   return (
     <SafeAreaView style={styles.safe}>
@@ -38,7 +81,9 @@ export default function TaskCreateScreen() {
         <Pressable style={styles.backBtn} onPress={() => router.back()}>
           <Ionicons name="chevron-back" size={22} color="#fff" />
         </Pressable>
-        <Text style={styles.headerTitle}>Crear Tarea</Text>
+        <Text style={styles.headerTitle}>
+          Crear Tarea{subjectTitle ? ` · ${subjectTitle}` : ""}
+        </Text>
         <View style={{ width: 22 }} />
       </View>
 
@@ -75,11 +120,18 @@ export default function TaskCreateScreen() {
           <Pressable
             style={[styles.btn, styles.btnCancel]}
             onPress={() => router.back()}
+            disabled={saving}
           >
             <Text style={styles.btnText}>Cancelar</Text>
           </Pressable>
-          <Pressable style={[styles.btn, styles.btnSave]} onPress={onSave}>
-            <Text style={styles.btnText}>Guardar</Text>
+          <Pressable
+            style={[styles.btn, styles.btnSave, saving && { opacity: 0.6 }]}
+            onPress={onSave}
+            disabled={saving}
+          >
+            <Text style={styles.btnText}>
+              {saving ? "Guardando..." : "Guardar"}
+            </Text>
           </Pressable>
         </View>
       </ScrollView>
@@ -140,4 +192,3 @@ const styles = StyleSheet.create({
   btnSave: { backgroundColor: COLORS.green },
   btnText: { color: "#fff", fontWeight: "700" },
 });
-
