@@ -9,6 +9,7 @@ import {
   SUBJECT_CARD_COLORS,
   subjectCardStyles,
 } from "@/components/cards/SubjectCardLayout";
+import { CompletedTaskCardLayout } from "@/components/cards/CompletedTaskCardLayout";
 import {
   getTasksBySubject,
   updateTaskStatus,
@@ -61,7 +62,10 @@ export default function TasksListScreen() {
     try {
       setLoading(true);
       const rows = await getTasksBySubject(subjectId);
-      setTasks(rows);
+      // Mostrar primero pendientes y al final completadas
+      const pending = rows.filter((r: any) => r.status !== 1);
+      const done = rows.filter((r: any) => r.status === 1);
+      setTasks([...pending, ...done]);
     } catch (error) {
       console.error("Error cargando tareas:", error);
       Alert.alert("Error", "No se pudieron cargar las tareas.");
@@ -187,8 +191,10 @@ function TaskCard({
     borderColor: completed ? "#1e874c" : "#333",
   };
 
+  const Layout = completed ? CompletedTaskCardLayout : SubjectCardLayout;
+
   return (
-    <SubjectCardLayout
+    <Layout
       circleColor={item.color || SUBJECT_CARD_COLORS.iconFallback}
       icon={iconNode}
       title={item.title}
