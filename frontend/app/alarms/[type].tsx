@@ -12,9 +12,7 @@ import { Alarm } from "../../src/types/alarms";
 const COLORS = { bg: "#D4F3EE", dark: "#0B2828" };
 
 export default function ListByType() {
-  const { type } = useLocalSearchParams<{
-    type: "subject" | "task" | "other";
-  }>();
+  const { type } = useLocalSearchParams<{ type: "subject" | "task" }>();
   const router = useRouter();
   const { listByType, toggleActive, remove, bootstrap } = useAlarms();
   const [toDelete, setToDelete] = useState<Alarm | null>(null);
@@ -43,7 +41,7 @@ export default function ListByType() {
           marginBottom: 12,
         }}
       >
-        {type === "subject" ? "Materias" : type === "task" ? "Tareas" : "Otros"}
+        {type === "subject" ? "Materias" : "Tareas"}
       </Text>
 
       <FlatList

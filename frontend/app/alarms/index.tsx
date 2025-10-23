@@ -36,7 +36,7 @@ const COLORS = {
   border: "rgba(0,0,0,0.08)",
 };
 
-type SectionKey = "subject" | "task" | "other";
+type SectionKey = "subject" | "task";
 
 type Section = {
   key: SectionKey;
@@ -47,7 +47,6 @@ type Section = {
 const SECTIONS: Section[] = [
   { key: "subject", icon: "book-open-variant", label: "Materias" },
   { key: "task", icon: "file-document-outline", label: "Tareas" },
-  { key: "other", icon: "head-lightbulb-outline", label: "Otros" },
 ];
 
 export default function AlarmHome() {
@@ -57,7 +56,6 @@ export default function AlarmHome() {
   const [open, setOpen] = useState<Record<SectionKey, boolean>>({
     subject: false,
     task: false,
-    other: false,
   });
 
   const [toDelete, setToDelete] = useState<Alarm | null>(null);

@@ -46,8 +46,9 @@ function validate(
   input: AlarmInput & { customByDay?: Record<string, string[]> | null }
 ) {
   if (!input.title?.trim()) throw new Error("El título es requerido.");
-  if (!["subject", "task", "other"].includes(input.type))
+  if (!["subject", "task"].includes(input.type))
     throw new Error("Tipo inválido.");
+
   if (!["once", "daily", "custom"].includes(input.repeatType))
     throw new Error("Repetición inválida.");
 
@@ -160,24 +161,6 @@ export const AlarmsProvider: React.FC<{ children: React.ReactNode }> = ({
           },
           {
             id: uuid(),
-            title: "Entrenamiento variable",
-            type: "other",
-            repeatType: "custom",
-            repeatDays: null,
-            times: null,
-            customByDay: {
-              L: ["07:30"],
-              S: ["10:00", "18:00"],
-            },
-            tone: "chime",
-            vibration: true,
-            active: true,
-            createdAt: now.toISOString(),
-            date: null,
-            time: null,
-          },
-          {
-            id: uuid(),
             title: "Entregar informe",
             type: "task",
             repeatType: "once",
@@ -187,7 +170,7 @@ export const AlarmsProvider: React.FC<{ children: React.ReactNode }> = ({
             time: "10:00",
             times: null,
             repeatDays: null,
-            tone: "ding",
+            tone: "bell",
             vibration: true,
             active: true,
             createdAt: now.toISOString(),

@@ -41,7 +41,7 @@ export default function AlarmForm() {
   const router = useRouter();
   const { id, type } = useLocalSearchParams<{
     id?: string;
-    type?: "subject" | "task" | "other";
+    type?: "subject" | "task";
   }>();
 
   const { getById, create, update, bootstrap } = useAlarms();
@@ -50,8 +50,10 @@ export default function AlarmForm() {
   const original = editing ? getById(id!) : undefined;
 
   const [title, setTitle] = useState(original?.title ?? "");
-  const [alarmType, setAlarmType] = useState<"subject" | "task" | "other">(
-    original?.type ?? (type as any) ?? "subject"
+  const [alarmType, setAlarmType] = useState<"subject" | "task">(
+    (original?.type as "subject" | "task") ??
+      (type as "subject" | "task") ??
+      "subject"
   );
 
   const [repeatType, setRepeatType] = useState<"once" | "daily" | "custom">(
@@ -163,7 +165,6 @@ export default function AlarmForm() {
     const options = [
       { key: "subject", label: "Materia", icon: "book-open-variant" },
       { key: "task", label: "Tarea", icon: "file-document-outline" },
-      { key: "other", label: "Otro", icon: "head-lightbulb-outline" },
     ] as const;
 
     return (

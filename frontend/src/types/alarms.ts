@@ -1,5 +1,5 @@
 export type RepeatType = "once" | "daily" | "custom";
-export type AlarmType = "subject" | "task" | "other";
+export type AlarmType = "subject" | "task";
 
 export type Alarm = {
   id: string;
