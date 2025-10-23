@@ -15,6 +15,7 @@ import { ensureSchema } from "../src/db/init";
 import { db } from "../src/db/db";
 import { student } from "../src/db/schemas/Student";
 import { eq } from "drizzle-orm";
+import * as Notifications from "expo-notifications";
 
 export { ErrorBoundary } from "expo-router";
 
@@ -23,6 +24,16 @@ export const unstable_settings = {
 };
 
 SplashScreen.preventAutoHideAsync();
+
+Notifications.setNotificationHandler({
+  handleNotification: async () => ({
+    shouldShowAlert: true,
+    shouldPlaySound: true,
+    shouldSetBadge: false,
+    shouldShowBanner: true,
+    shouldShowList: true,
+  }),
+});
 
 export default function RootLayout() {
   const [loaded, error] = useFonts({
@@ -38,6 +49,11 @@ export default function RootLayout() {
     if (!loaded) return;
 
     (async () => {
+      const { status } = await Notifications.getPermissionsAsync();
+      if (status !== "granted") {
+        await Notifications.requestPermissionsAsync();
+      }
+
       ensureSchema();
 
       const pepitoEmail = "pepito@gmail.com";

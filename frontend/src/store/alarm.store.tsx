@@ -8,6 +8,7 @@ import React, {
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Alarm, AlarmInput, AlarmType } from "../types/alarms";
 import { DAYS, compareTimeAsc } from "../utils/time";
+import { scheduleAlarm, cancelAllAlarms } from "../services/alarm.scheduler";
 
 const KEY_LIST = "@app/alarms:list";
 const KEY_LAST_TONE = "@app/alarms:lastTone";
@@ -19,7 +20,6 @@ const uuid = () =>
     return v.toString(16);
   });
 
-// obtiene la primera hora (mínima) de una alarma para ordenación
 function firstTimeOf(
   alarm: Alarm | (Alarm & { customByDay?: Record<string, string[]> })
 ) {
@@ -82,7 +82,6 @@ function validate(
     }
 
     if (hasMap) {
-      // Validar que días sean válidos y que cada día tenga al menos una hora
       for (const d of Object.keys(input.customByDay!)) {
         if (!DAYS.includes(d as any)) throw new Error(`Día inválido (${d}).`);
         const arr = input.customByDay![d];
@@ -207,6 +206,7 @@ export const AlarmsProvider: React.FC<{ children: React.ReactNode }> = ({
       const next = orderedByActivesAndTime([...alarms, alarm]);
       setAlarms(next);
       await persist(next);
+      await scheduleAlarm(alarm);
       return alarm;
     },
     [alarms, persist]
@@ -241,6 +241,7 @@ export const AlarmsProvider: React.FC<{ children: React.ReactNode }> = ({
       const ordered = orderedByActivesAndTime(next);
       setAlarms(ordered);
       await persist(ordered);
+      await scheduleAlarm(merged);
       return merged;
     },
     [alarms, persist]
@@ -251,6 +252,11 @@ export const AlarmsProvider: React.FC<{ children: React.ReactNode }> = ({
       const next = alarms.map((a) => (a.id === id ? { ...a, active } : a));
       setAlarms(orderedByActivesAndTime(next));
       await persist(next);
+      await cancelAllAlarms();
+      const actives = next.filter((a) => a.active);
+      for (const alarm of actives) {
+        await scheduleAlarm(alarm);
+      }
     },
     [alarms, persist]
   );
@@ -260,6 +266,11 @@ export const AlarmsProvider: React.FC<{ children: React.ReactNode }> = ({
       const next = alarms.filter((a) => a.id !== id);
       setAlarms(orderedByActivesAndTime(next));
       await persist(next);
+      await cancelAllAlarms();
+      const actives = next.filter((a) => a.active);
+      for (const alarm of actives) {
+        await scheduleAlarm(alarm);
+      }
     },
     [alarms, persist]
   );
@@ -272,6 +283,7 @@ export const AlarmsProvider: React.FC<{ children: React.ReactNode }> = ({
   const clearAll = useCallback(async () => {
     setAlarms([]);
     await AsyncStorage.removeItem(KEY_LIST);
+    await cancelAllAlarms();
   }, []);
 
   const ctx: Ctx = useMemo(
