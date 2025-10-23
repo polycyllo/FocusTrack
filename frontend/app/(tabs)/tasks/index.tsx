@@ -99,13 +99,21 @@ export default function TasksListScreen() {
   };
 
   const openPomodoro = () => {
-    if (!subjectId) {
-      Alert.alert("Materia requerida", "No se pudo identificar la materia.");
-      return;
-    }
-    setSubject(String(subjectId));
-    router.push("/(tabs)/Pomodoro/PomodoroConfigForm");
-  };
+  if (!subjectId) {
+    Alert.alert("Materia requerida", "No se pudo identificar la materia.");
+    return;
+  }
+  setSubject(String(subjectId));
+  router.push({
+    pathname: "/(tabs)/Pomodoro/PomodoroConfigForm",
+    params: {
+      from: "tasks",
+      subjectId: subjectIdParam,
+      subjectTitle: subjectTitle ?? "",
+    },
+  });
+};
+
 
   const toggleTaskStatus = async (
     taskId: number,

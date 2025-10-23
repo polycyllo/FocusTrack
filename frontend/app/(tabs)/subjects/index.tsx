@@ -189,12 +189,16 @@ function SubjectCard({
   const cancelDelete = () => setDeleting(false);
 
   const openPomodoroConfig = () => {
-    const subjectId = item.subject.subjectId || item.subject.subject_id;
-    if (subjectId) {
-      setSubject(subjectId.toString());
-      router.push("/(tabs)/Pomodoro/PomodoroConfigForm" as Href);
-    }
-  };
+  const subjectId = item.subject.subjectId || item.subject.subject_id;
+  if (subjectId) {
+    setSubject(subjectId.toString());
+    router.push({
+      pathname: "/(tabs)/Pomodoro/PomodoroConfigForm",
+      params: { from: "subjects" },
+    });
+  }
+};
+
 
   const subtitle =
     item.schedules && item.schedules.length > 0

@@ -9,11 +9,21 @@ import {
 } from "react-native";
 import Slider from "@react-native-community/slider";
 import { useRouter, Href } from "expo-router";
+import { Ionicons } from "@expo/vector-icons";
+import { useLocalSearchParams } from "expo-router";
+
 
 import { usePomodoroStore } from "@/src/store/pomodoro.store";
 
 export default function PomodoroConfigForm() {
   const router = useRouter();
+  const { from, subjectId, subjectTitle } = useLocalSearchParams<{
+  from?: string;
+  subjectId?: string;
+  subjectTitle?: string;
+}>();
+
+
 
   const config = usePomodoroStore((s) => s.config);
   const setConfig = usePomodoroStore((s) => s.setConfig);
@@ -54,8 +64,33 @@ export default function PomodoroConfigForm() {
       <View style={styles.container}>
         {/* Header */}
         <View style={styles.header}>
-          <Text style={styles.headerTitle}>Configuración Pomodoro</Text>
-        </View>
+         <Pressable
+            onPress={() => {
+           if (from === "subjects") {
+            router.replace("/subjects");
+           } else if (from === "tasks") {
+            router.replace({
+            pathname: "/tasks",
+            params: {
+            subjectId,
+            subjectTitle,
+             refresh: Date.now().toString(), // fuerza actualización de lista
+           },
+          });
+          } else {
+            router.back();
+           }
+          }}
+
+        style={{ position: "absolute", left: 16, padding: 4 }}
+         >
+       <Ionicons name="arrow-back" size={24} color="#fff" />
+       </Pressable>
+
+        <Text style={styles.headerTitle}>Configuración Pomodoro</Text>
+       </View>
+
+
 
         {/* Body */}
         <View style={styles.body}>
