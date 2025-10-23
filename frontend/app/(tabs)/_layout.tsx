@@ -21,8 +21,6 @@ export default function TabLayout() {
 
   return (
     <AlarmsProvider>
-      {" "}
-      {/* ⬅️ AHORA TODAS LAS TABS TIENEN EL CONTEXTO */}
       <Tabs
         screenOptions={{
           tabBarActiveTintColor: Colors[colorScheme ?? "light"].tint,
@@ -61,9 +59,8 @@ export default function TabLayout() {
           name="Pomodoro"
           options={{ title: "Pomodoro", headerShown: false }}
         />
-        {/* Pestaña de Alarmas */}
         <Tabs.Screen
-          name="alarms" // debe existir app/(tabs)/alarms.tsx (proxy)
+          name="alarms"
           options={{
             title: "Alarmas",
             tabBarIcon: ({ color, size }) => (
