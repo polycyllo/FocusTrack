@@ -61,11 +61,19 @@ export default function TasksListScreen() {
 
     try {
       setLoading(true);
-      const rows = await getTasksBySubject(subjectId);
-      // Mostrar primero pendientes y al final completadas
-      const pending = rows.filter((r: any) => r.status !== 1);
-      const done = rows.filter((r: any) => r.status === 1);
-      setTasks([...pending, ...done]);
+      const rows = (await getTasksBySubject(subjectId)) as TaskRow[];
+
+      const sortByCreatedDesc = (a: TaskRow, b: TaskRow) => {
+        const aId = a.taskId ?? a.task_id ?? 0;
+        const bId = b.taskId ?? b.task_id ?? 0;
+        return bId - aId;
+      };
+
+      const sorted = [...rows].sort(sortByCreatedDesc);
+      const pending = sorted.filter((task) => task.status !== 1);
+      const completed = sorted.filter((task) => task.status === 1);
+
+      setTasks([...pending, ...completed]);
     } catch (error) {
       console.error("Error cargando tareas:", error);
       Alert.alert("Error", "No se pudieron cargar las tareas.");
