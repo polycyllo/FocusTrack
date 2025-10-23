@@ -11,6 +11,7 @@ export const task = sqliteTable("task", {
   color: text("color"),
   icon: text("icon"),
   createdAt: text("created_at"),
+  completedAt: text("completed_at"),
   subjectId: integer("subject_id")
     .notNull()
     .references(() => subject.subjectId),

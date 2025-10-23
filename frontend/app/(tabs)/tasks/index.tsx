@@ -25,7 +25,26 @@ type TaskRow = {
   color?: string | null;
   icon?: string | null;
   status?: number | null;
+  createdAt?: string | null;
+  created_at?: string | null;
+  completedAt?: string | null;
+  completed_at?: string | null;
 };
+
+const getTaskNumericId = (row: TaskRow) => row.taskId ?? row.task_id ?? 0;
+
+const parseDateToMs = (value?: string | null) => {
+  if (!value) return 0;
+  const isoCandidate = value.includes("T") ? value : value.replace(" ", "T") + "Z";
+  const time = Date.parse(isoCandidate);
+  return Number.isNaN(time) ? 0 : time;
+};
+
+const getCreatedTimestamp = (row: TaskRow) =>
+  parseDateToMs(row.createdAt ?? row.created_at) || getTaskNumericId(row);
+
+const getCompletedTimestamp = (row: TaskRow) =>
+  parseDateToMs(row.completedAt ?? row.completed_at) || getCreatedTimestamp(row);
 
 const SCREEN_COLORS = {
   background: "#9ECDF2",
@@ -63,15 +82,13 @@ export default function TasksListScreen() {
       setLoading(true);
       const rows = (await getTasksBySubject(subjectId)) as TaskRow[];
 
-      const sortByCreatedDesc = (a: TaskRow, b: TaskRow) => {
-        const aId = a.taskId ?? a.task_id ?? 0;
-        const bId = b.taskId ?? b.task_id ?? 0;
-        return bId - aId;
-      };
+      const pending = rows
+        .filter((task) => task.status !== 1)
+        .sort((a, b) => getCreatedTimestamp(b) - getCreatedTimestamp(a));
 
-      const sorted = [...rows].sort(sortByCreatedDesc);
-      const pending = sorted.filter((task) => task.status !== 1);
-      const completed = sorted.filter((task) => task.status === 1);
+      const completed = rows
+        .filter((task) => task.status === 1)
+        .sort((a, b) => getCompletedTimestamp(b) - getCompletedTimestamp(a));
 
       setTasks([...pending, ...completed]);
     } catch (error) {
