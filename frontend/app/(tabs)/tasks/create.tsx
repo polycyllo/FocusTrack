@@ -36,51 +36,83 @@ export default function TaskCreateScreen() {
   const [saving, setSaving] = useState(false);
   const subjectId = subjectIdParam ? Number(subjectIdParam) : null;
 
-  const onSave = async () => {
-    if (!subjectId) {
-      Alert.alert(
-        "Materia requerida",
-        "No se pudo identificar la materia asociada para esta tarea."
-      );
-      return;
-    }
+const onSave = async () => {
+  if (!subjectId) {
+    Alert.alert(
+      "Materia requerida",
+      "No se pudo identificar la materia asociada para esta tarea."
+    );
+    return;
+  }
 
-    if (!name.trim()) {
-      Alert.alert("Campo obligatorio", "El nombre de la tarea es requerido.");
-      return;
-    }
+  if (!name.trim()) {
+    Alert.alert("Campo obligatorio", "El nombre de la tarea es requerido.");
+    return;
+  }
 
-    const payload = {
-      title: name.trim(),
-      description: description.trim() ? description.trim() : null,
-      color,
-      icon,
-      subjectId,
-    };
+  if (name.trim().length < 3) {
+    Alert.alert(
+      "Nombre demasiado corto",
+      "El nombre debe tener al menos 3 caracteres."
+    );
+    return;
+  }
+  if (name.trim().length > 60) {
+    Alert.alert(
+      "Nombre demasiado largo",
+      "El nombre no debe superar los 60 caracteres."
+    );
+    return;
+  }
 
-    try {
-      setSaving(true);
-      await addTask(payload);
+  if (description.trim().length > 0 && description.trim().length < 5) {
+    Alert.alert(
+      "Descripción muy corta",
+      "Si agregas una descripción, debe tener al menos 5 caracteres."
+    );
+    return;
+  }
+  if (description.trim().length > 250) {
+    Alert.alert(
+      "Descripción demasiado larga",
+      "La descripción no debe superar los 250 caracteres."
+    );
+    return;
+  }
 
-      setName("");
-      setDescription("");
-      setColor(FORM_COLOR_SWATCHES[0]);
-      setIcon(FORM_ICON_OPTIONS[0].key);
-
-      router.replace({
-        pathname: "/(tabs)/tasks",
-        params: {
-          subjectId: subjectIdParam,
-          subjectTitle: subjectTitle ?? "",
-        },
-      });
-    } catch (error) {
-      console.error("Error guardando tarea:", error);
-      Alert.alert("Error", "No se pudo guardar la tarea. Intenta de nuevo.");
-    } finally {
-      setSaving(false);
-    }
+  const payload = {
+    title: name.trim(),
+    description: description.trim() ? description.trim() : null,
+    color,
+    icon,
+    subjectId,
   };
+
+  try {
+    setSaving(true);
+    await addTask(payload);
+
+    setName("");
+    setDescription("");
+    setColor(FORM_COLOR_SWATCHES[0]);
+    setIcon(FORM_ICON_OPTIONS[0].key);
+
+    router.push({
+      pathname: "/(tabs)/tasks",
+      params: {
+        subjectId: subjectIdParam,
+        subjectTitle: subjectTitle ?? "",
+        refresh: Date.now().toString(),
+      },
+    });
+  } catch (error) {
+    console.error("Error guardando tarea:", error);
+    Alert.alert("Error", "No se pudo guardar la tarea. Intenta de nuevo.");
+  } finally {
+    setSaving(false);
+  }
+};
+  
 
   return (
     <SafeAreaView style={styles.safe}>

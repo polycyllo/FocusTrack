@@ -74,7 +74,7 @@ export default function PomodoroConfigForm() {
             params: {
             subjectId,
             subjectTitle,
-             refresh: Date.now().toString(), // fuerza actualización de lista
+             refresh: Date.now().toString(),
            },
           });
           } else {
