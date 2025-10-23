@@ -1,5 +1,5 @@
 import React, { useCallback, useMemo, useState } from "react";
-import { Alert, Pressable, View } from "react-native";
+import { Alert, Pressable, StyleSheet, View } from "react-native";
 import { useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 
@@ -207,14 +207,6 @@ function TaskCard({
 
   const id = item.taskId ?? item.task_id ?? 0;
   const completed = item.status === 1;
-  const statusDotStyle = {
-    width: 18,
-    height: 18,
-    borderRadius: 9,
-    backgroundColor: completed ? "#27AE60" : "#fff",
-    borderWidth: 2,
-    borderColor: completed ? "#1e874c" : "#333",
-  };
 
   const Layout = completed ? CompletedTaskCardLayout : SubjectCardLayout;
 
@@ -237,13 +229,46 @@ function TaskCard({
             />
           </Pressable>
           <Pressable
-            style={subjectCardStyles.actionBtn}
+            style={taskCardStyles.checkboxButton}
             onPress={() => onToggleStatus(id, item.status)}
           >
-            <View style={statusDotStyle} />
+            <View
+              style={[
+                taskCardStyles.checkboxSquare,
+                completed && taskCardStyles.checkboxSquareCompleted,
+              ]}
+            >
+              {completed ? (
+                <Ionicons name="checkmark" size={14} color="#fff" />
+              ) : null}
+            </View>
           </Pressable>
         </>
       }
     />
   );
 }
+
+const taskCardStyles = StyleSheet.create({
+  checkboxButton: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  checkboxSquare: {
+    width: 24,
+    height: 24,
+    borderRadius: 6,
+    borderWidth: 2,
+    borderColor: "#C5CBD3",
+    backgroundColor: "#fff",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  checkboxSquareCompleted: {
+    borderColor: "#27AE60",
+    backgroundColor: "#27AE60",
+  },
+});
