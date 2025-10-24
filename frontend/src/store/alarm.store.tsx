@@ -8,7 +8,12 @@ import React, {
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Alarm, AlarmInput, AlarmType } from "../types/alarms";
 import { DAYS, compareTimeAsc } from "../utils/time";
-import { scheduleAlarm, cancelAllAlarms } from "../services/alarm.scheduler";
+import {
+  scheduleAlarm,
+  cancelAllAlarms,
+  presentStatusNotification,
+  describeRecurrence,
+} from "../services/alarm.scheduler";
 
 const KEY_LIST = "@app/alarms:list";
 const KEY_LAST_TONE = "@app/alarms:lastTone";
@@ -207,6 +212,12 @@ export const AlarmsProvider: React.FC<{ children: React.ReactNode }> = ({
       setAlarms(next);
       await persist(next);
       await scheduleAlarm(alarm);
+      try {
+        await presentStatusNotification("created", alarm);
+      } catch (e) {
+        console.warn("status-noti:create failed", e);
+      }
+
       return alarm;
     },
     [alarms, persist]
@@ -219,7 +230,16 @@ export const AlarmsProvider: React.FC<{ children: React.ReactNode }> = ({
     ) => {
       const idx = alarms.findIndex((a) => a.id === id);
       if (idx < 0) throw new Error("No existe la alarma");
-      const merged: Alarm = { ...alarms[idx], ...(patch as any) };
+
+      const prev = alarms[idx];
+      const merged: Alarm = {
+        ...prev,
+        ...(patch as any),
+        active:
+          typeof (patch as any).active === "boolean"
+            ? (patch as any).active
+            : prev.active,
+      };
 
       validate({
         title: (merged as any).title,
@@ -244,8 +264,12 @@ export const AlarmsProvider: React.FC<{ children: React.ReactNode }> = ({
 
       await cancelAllAlarms();
       const actives = ordered.filter((a) => a.active);
-      for (const a of actives) {
-        await scheduleAlarm(a);
+      for (const a of actives) await scheduleAlarm(a);
+
+      try {
+        await presentStatusNotification("updated", merged);
+      } catch (e) {
+        console.warn("status-noti:update failed", e);
       }
 
       return merged;
@@ -263,19 +287,37 @@ export const AlarmsProvider: React.FC<{ children: React.ReactNode }> = ({
       for (const alarm of actives) {
         await scheduleAlarm(alarm);
       }
+      const changed = next.find((a) => a.id === id)!;
+      try {
+        await presentStatusNotification(
+          active ? "activated" : "deactivated",
+          changed
+        );
+      } catch (e) {
+        console.warn("status-noti:toggle failed", e);
+      }
     },
     [alarms, persist]
   );
 
   const remove = useCallback(
     async (id: string) => {
+      const toDeleteRef = alarms.find((a) => a.id === id);
+
       const next = alarms.filter((a) => a.id !== id);
       setAlarms(orderedByActivesAndTime(next));
       await persist(next);
       await cancelAllAlarms();
+
       const actives = next.filter((a) => a.active);
       for (const alarm of actives) {
         await scheduleAlarm(alarm);
+      }
+
+      if (toDeleteRef) {
+        await presentStatusNotification("removed", {
+          ...(toDeleteRef as any),
+        } as Alarm);
       }
     },
     [alarms, persist]

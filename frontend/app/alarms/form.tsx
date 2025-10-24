@@ -44,7 +44,7 @@ export default function AlarmForm() {
     type?: "subject" | "task";
   }>();
 
-  const { getById, create, update, bootstrap } = useAlarms();
+  const { getById, create, update, bootstrap, hydrated } = useAlarms();
 
   const editing = !!id;
   const original = editing ? getById(id!) : undefined;
@@ -78,7 +78,6 @@ export default function AlarmForm() {
   const [perDay, setPerDay] = useState<boolean>(!!originalMap);
   const [customByDay, setCustomByDay] = useState<DayMap>(() => {
     if (originalMap) return structuredClone(originalMap);
-    // si no hay, inicializamos vacío
     return {};
   });
 
@@ -92,6 +91,28 @@ export default function AlarmForm() {
   useEffect(() => {
     bootstrap();
   }, []);
+  useEffect(() => {
+    if (!editing) return;
+    if (!hydrated) return;
+    const o = getById(id!);
+    if (!o) return;
+
+    setTitle(o.title ?? "");
+    setAlarmType((o.type as any) ?? "subject");
+    setRepeatType(o.repeatType ?? "daily");
+
+    setDate(o.date ? new Date(o.date) : null);
+    setTime(o.time ?? "08:00");
+    setTimes(o.times ?? ["08:00"]);
+    setRepeatDays(o.repeatDays ?? []);
+
+    const map = (o as any).customByDay ?? null;
+    setPerDay(!!map && Object.keys(map).length > 0);
+    setCustomByDay(map ?? {});
+
+    setTone(o.tone ?? "bell");
+    setVibration(typeof o.vibration === "boolean" ? o.vibration : true);
+  }, [editing, hydrated, id]);
 
   useEffect(() => {
     if (!perDay || repeatType !== "custom") return;
@@ -136,7 +157,7 @@ export default function AlarmForm() {
             : null,
         tone,
         vibration,
-        active: true,
+        active: editing ? !!original?.active : true,
         customByDay:
           repeatType === "custom" && perDay
             ? Object.keys(customByDay).length

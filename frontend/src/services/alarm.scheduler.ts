@@ -2,6 +2,7 @@ import * as Notifications from "expo-notifications";
 import { Platform } from "react-native";
 import { Alarm, DayMap } from "../types/alarms";
 import { dayLetterToWeekday } from "../utils/time";
+import { DAY_LABEL, DAYS } from "../utils/time";
 
 function buildBody(alarm: Alarm, timeText: string) {
   if (alarm.type === "subject") return `Clase / Materia a las ${timeText}.`;
@@ -181,4 +182,69 @@ export async function scheduleAlarm(alarm: Alarm) {
 
 export async function cancelAllAlarms() {
   await Notifications.cancelAllScheduledNotificationsAsync();
+}
+
+export function describeRecurrence(alarm: Alarm): string {
+  if (alarm.repeatType === "once") {
+    const d = alarm.date ?? "";
+    const t = alarm.time ?? alarm.times?.[0] ?? "";
+    return `Única vez — ${d} a las ${t}`;
+  }
+  if (alarm.repeatType === "daily") {
+    const t = alarm.time ?? alarm.times?.[0] ?? "";
+    return `Diaria — ${t}`;
+  }
+  if (alarm.customByDay && Object.keys(alarm.customByDay).length) {
+    const parts = Object.keys(alarm.customByDay)
+      .filter((d) => DAYS.includes(d as any))
+      .map((d) => {
+        const hours = (alarm.customByDay![d] ?? []).join(", ");
+        return `${DAY_LABEL[d]} (${hours})`;
+      });
+    return `Personalizada — ${parts.join("; ")}`;
+  }
+  if (alarm.repeatDays?.length && alarm.times?.length) {
+    const ds = alarm.repeatDays
+      .filter((d) => DAYS.includes(d as any))
+      .map((d) => DAY_LABEL[d])
+      .join("-");
+    const hs = alarm.times.join(", ");
+    return `Personalizada — ${ds} a ${hs}`;
+  }
+  const t = alarm.time ?? alarm.times?.[0] ?? "00:00";
+  return `Personalizada — ${t}`;
+}
+
+type StatusAction =
+  | "created"
+  | "updated"
+  | "activated"
+  | "deactivated"
+  | "removed";
+
+export async function presentStatusNotification(
+  action: StatusAction,
+  alarm: Alarm
+) {
+  const rec = describeRecurrence(alarm);
+  const mapTitle: Record<StatusAction, string> = {
+    created: "✅ Alarma creada",
+    updated: "✏️ Alarma actualizada",
+    activated: "🔔 Alarma activada",
+    deactivated: "🔕 Alarma desactivada",
+    removed: "🗑️ Alarma eliminada",
+  };
+  const title = mapTitle[action] ?? "Alarma";
+  const body =
+    action === "removed" ? `${alarm.title}` : `${alarm.title} — ${rec}`;
+  await Notifications.scheduleNotificationAsync({
+    content: {
+      title,
+      body,
+      data: { alarmId: alarm.id, action },
+      sound: "default",
+      priority: Notifications.AndroidNotificationPriority.DEFAULT,
+    },
+    trigger: null,
+  });
 }
