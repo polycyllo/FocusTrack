@@ -14,6 +14,13 @@ import {
   presentStatusNotification,
   describeRecurrence,
 } from "../services/alarm.scheduler";
+import { 
+  insertAlarm, 
+  updateAlarmById, 
+  findByAlarmId,
+  deleteAlarmById,
+  getAllAlarms 
+} from "../features/alarms/reminder.repo";
 
 const KEY_LIST = "@app/alarms:list";
 const KEY_LAST_TONE = "@app/alarms:lastTone";
@@ -24,6 +31,26 @@ const uuid = () =>
       v = c === "x" ? r : (r & 0x3) | 0x8;
     return v.toString(16);
   });
+
+// Función para convertir datos de la BD al formato Alarm
+function dbRowToAlarm(row: any): Alarm {
+  return {
+    id: row.id,
+    title: row.title,
+    type: row.type,
+    linkedId: row.linkedId,
+    repeatType: row.repeatType,
+    date: row.date,
+    time: row.time,
+    times: row.times ? JSON.parse(row.times) : null,
+    repeatDays: row.repeatDays ? JSON.parse(row.repeatDays) : null,
+    customByDay: row.customByDay ? JSON.parse(row.customByDay) : null,
+    tone: row.tone,
+    vibration: !!row.vibration,
+    active: !!row.active,
+    createdAt: row.createdAt,
+  } as Alarm;
+}
 
 function firstTimeOf(
   alarm: Alarm | (Alarm & { customByDay?: Record<string, string[]> })
@@ -151,56 +178,122 @@ export const AlarmsProvider: React.FC<{ children: React.ReactNode }> = ({
     if (hydrated) return;
     setLoading(true);
     try {
-      const raw = await AsyncStorage.getItem(KEY_LIST);
       const last = await AsyncStorage.getItem(KEY_LAST_TONE);
-
       let loadedList: Alarm[] = [];
-      if (raw) {
-        const parsed: Alarm[] = JSON.parse(raw);
-        loadedList = orderedByActivesAndTime(parsed);
-        setAlarms(loadedList);
-      } else {
-        const now = new Date();
-        const base: (Alarm & { customByDay?: Record<string, string[]> })[] = [
-          {
-            id: uuid(),
-            title: "Clase de Cálculo",
-            type: "subject",
-            repeatType: "custom",
-            repeatDays: ["L", "M", "X", "J", "V"],
-            times: ["08:00"],
-            tone: "bell",
-            vibration: true,
-            active: true,
-            createdAt: now.toISOString(),
-            date: null,
-            time: null,
-          },
-          {
-            id: uuid(),
-            title: "Entregar informe",
-            type: "task",
-            repeatType: "once",
-            date: new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1)
-              .toISOString()
-              .slice(0, 10),
-            time: "10:00",
-            times: null,
-            repeatDays: null,
-            tone: "bell",
-            vibration: true,
-            active: true,
-            createdAt: now.toISOString(),
-          },
-        ] as any;
-        loadedList = orderedByActivesAndTime(base as any);
-        setAlarms(loadedList);
-        await persist(loadedList);
+
+      // Intentar cargar desde la base de datos primero
+      try {
+        const dbRows = await getAllAlarms();
+        if (dbRows.length > 0) {
+          loadedList = dbRows.map(dbRowToAlarm);
+        } else {
+          // Si no hay datos en la BD, intentar migrar desde AsyncStorage
+          const raw = await AsyncStorage.getItem(KEY_LIST);
+          if (raw) {
+            const parsed: Alarm[] = JSON.parse(raw);
+            // Migrar a la base de datos
+            for (const alarm of parsed) {
+              try {
+                await insertAlarm({
+                  id: alarm.id,
+                  title: alarm.title,
+                  type: alarm.type,
+                  linkedId: alarm.linkedId,
+                  repeatType: alarm.repeatType,
+                  date: alarm.date,
+                  time: alarm.time,
+                  times: alarm.times,
+                  repeatDays: alarm.repeatDays,
+                  customByDay: (alarm as any).customByDay,
+                  tone: alarm.tone,
+                  vibration: alarm.vibration,
+                  active: alarm.active,
+                  createdAt: alarm.createdAt
+                });
+              } catch (e) {
+                console.warn("Error migrating alarm to database:", e);
+              }
+            }
+            loadedList = parsed;
+            // Limpiar AsyncStorage después de la migración
+            await AsyncStorage.removeItem(KEY_LIST);
+          } else {
+            // Crear alarmas de ejemplo si no hay datos
+            const now = new Date();
+            const base: (Alarm & { customByDay?: Record<string, string[]> })[] = [
+              {
+                id: uuid(),
+                title: "Clase de Cálculo",
+                type: "subject",
+                repeatType: "custom",
+                repeatDays: ["L", "M", "X", "J", "V"],
+                times: ["08:00"],
+                tone: "bell",
+                vibration: true,
+                active: true,
+                createdAt: now.toISOString(),
+                date: null,
+                time: null,
+              },
+              {
+                id: uuid(),
+                title: "Entregar informe",
+                type: "task",
+                repeatType: "once",
+                date: new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1)
+                  .toISOString()
+                  .slice(0, 10),
+                time: "10:00",
+                times: null,
+                repeatDays: null,
+                tone: "bell",
+                vibration: true,
+                active: true,
+                createdAt: now.toISOString(),
+              },
+            ] as any;
+            
+            // Guardar ejemplos en la base de datos
+            for (const alarm of base) {
+              try {
+                await insertAlarm({
+                  id: alarm.id,
+                  title: alarm.title,
+                  type: alarm.type,
+                  linkedId: alarm.linkedId,
+                  repeatType: alarm.repeatType,
+                  date: alarm.date,
+                  time: alarm.time,
+                  times: alarm.times,
+                  repeatDays: alarm.repeatDays,
+                  customByDay: alarm.customByDay,
+                  tone: alarm.tone,
+                  vibration: alarm.vibration,
+                  active: alarm.active,
+                  createdAt: alarm.createdAt
+                });
+              } catch (e) {
+                console.warn("Error inserting example alarm:", e);
+              }
+            }
+            loadedList = base as any;
+          }
+        }
+      } catch (e) {
+        console.error("Error loading from database, falling back to AsyncStorage:", e);
+        // Fallback a AsyncStorage si hay error con la BD
+        const raw = await AsyncStorage.getItem(KEY_LIST);
+        if (raw) {
+          const parsed: Alarm[] = JSON.parse(raw);
+          loadedList = parsed;
+        }
       }
 
-      if (last) setLastToneState(last);
+      const ordered = orderedByActivesAndTime(loadedList);
+      setAlarms(ordered);
 
-      reseedAllActive(loadedList);
+      if (last) setLastToneState(last);
+      reseedAllActive(ordered);
     } catch (e: any) {
       setError(e?.message ?? "Error al cargar alarmas");
     } finally {
@@ -225,6 +318,30 @@ export const AlarmsProvider: React.FC<{ children: React.ReactNode }> = ({
       validate(input);
       const now = new Date().toISOString();
       const alarm: Alarm = { id: uuid(), createdAt: now, ...(input as any) };
+      
+      // Guardar en la base de datos
+      try {
+        await insertAlarm({
+          id: alarm.id,
+          title: alarm.title,
+          type: alarm.type,
+          linkedId: alarm.linkedId,
+          repeatType: alarm.repeatType,
+          date: alarm.date,
+          time: alarm.time,
+          times: alarm.times,
+          repeatDays: alarm.repeatDays,
+          customByDay: (alarm as any).customByDay,
+          tone: alarm.tone,
+          vibration: alarm.vibration,
+          active: alarm.active,
+          createdAt: alarm.createdAt
+        });
+      } catch (e) {
+        console.error("Error saving alarm to database:", e);
+        throw new Error("Error al guardar la alarma en la base de datos");
+      }
+
       const next = orderedByActivesAndTime([...alarms, alarm]);
       setAlarms(next);
       await persist(next);
@@ -272,6 +389,27 @@ export const AlarmsProvider: React.FC<{ children: React.ReactNode }> = ({
         customByDay: (merged as any).customByDay ?? null,
       });
 
+      // Actualizar en la base de datos
+      try {
+        await updateAlarmById(id, {
+          title: merged.title,
+          type: merged.type,
+          linkedId: merged.linkedId,
+          repeatType: merged.repeatType,
+          date: merged.date,
+          time: merged.time,
+          times: merged.times,
+          repeatDays: merged.repeatDays,
+          customByDay: (merged as any).customByDay,
+          tone: merged.tone,
+          vibration: merged.vibration,
+          active: merged.active
+        });
+      } catch (e) {
+        console.error("Error updating alarm in database:", e);
+        throw new Error("Error al actualizar la alarma en la base de datos");
+      }
+
       const next = [...alarms];
       next[idx] = merged;
       const ordered = orderedByActivesAndTime(next);
@@ -291,6 +429,14 @@ export const AlarmsProvider: React.FC<{ children: React.ReactNode }> = ({
 
   const toggleActive = useCallback(
     async (id: string, active: boolean) => {
+      // Actualizar en la base de datos primero
+      try {
+        await updateAlarmById(id, { active });
+      } catch (e) {
+        console.error("Error toggling alarm active status in database:", e);
+        throw new Error("Error al cambiar el estado de la alarma en la base de datos");
+      }
+
       const next = alarms.map((a) => (a.id === id ? { ...a, active } : a));
       setAlarms(orderedByActivesAndTime(next));
       await persist(next);
@@ -309,6 +455,14 @@ export const AlarmsProvider: React.FC<{ children: React.ReactNode }> = ({
   const remove = useCallback(
     async (id: string) => {
       const toDeleteRef = alarms.find((a) => a.id === id);
+
+      // Eliminar de la base de datos primero
+      try {
+        await deleteAlarmById(id);
+      } catch (e) {
+        console.error("Error deleting alarm from database:", e);
+        throw new Error("Error al eliminar la alarma de la base de datos");
+      }
 
       const next = alarms.filter((a) => a.id !== id);
       setAlarms(orderedByActivesAndTime(next));
