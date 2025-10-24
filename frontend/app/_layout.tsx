@@ -7,7 +7,7 @@ import {
 import { useFonts } from "expo-font";
 import { Stack } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import "react-native-reanimated";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { useColorScheme } from "@/components/useColorScheme";
@@ -27,11 +27,10 @@ SplashScreen.preventAutoHideAsync();
 
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
-    shouldShowAlert: true,
     shouldPlaySound: true,
     shouldSetBadge: false,
-    shouldShowBanner: true,
-    shouldShowList: true,
+    shouldShowBanner: true as any,
+    shouldShowList: true as any,
   }),
 });
 
@@ -54,6 +53,25 @@ export default function RootLayout() {
         await Notifications.requestPermissionsAsync();
       }
 
+      await Notifications.setNotificationChannelAsync("default", {
+        name: "Recordatorios",
+        importance: Notifications.AndroidImportance.HIGH,
+        sound: "default",
+        vibrationPattern: [250, 250, 250, 250],
+        lockscreenVisibility:
+          Notifications.AndroidNotificationVisibility.PUBLIC,
+        bypassDnd: false,
+      });
+
+      await Notifications.setNotificationChannelAsync("alarm-bell", {
+        name: "Alarmas (Campana)",
+        importance: Notifications.AndroidImportance.HIGH,
+        sound: "bell",
+        vibrationPattern: [250, 250, 250, 250],
+        lockscreenVisibility:
+          Notifications.AndroidNotificationVisibility.PUBLIC,
+        bypassDnd: false,
+      });
       ensureSchema();
 
       const pepitoEmail = "pepito@gmail.com";
