@@ -8,3 +8,4 @@ export default function TabsIndexRedirect() {
 export  function TabOneScreen() {
   return <PomodoroConfigForm />;
 }
+
