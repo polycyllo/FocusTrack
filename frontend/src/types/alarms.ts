@@ -1,0 +1,23 @@
+export type RepeatType = "once" | "daily" | "custom";
+export type AlarmType = "subject" | "task" | "other";
+
+export type Alarm = {
+  id: string;
+  title: string;
+  type: AlarmType;
+  linkedId?: string | null;
+
+  repeatType: RepeatType;
+  date?: string | null;
+  time?: string | null;
+  times?: string[] | null;
+  repeatDays?: string[] | null;
+
+  tone: string;
+  vibration: boolean;
+  active: boolean;
+
+  createdAt: string;
+};
+
+export type AlarmInput = Omit<Alarm, "id" | "createdAt">;
