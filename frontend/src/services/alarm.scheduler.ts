@@ -3,6 +3,44 @@ import { Platform } from "react-native";
 import { Alarm, DayMap } from "../types/alarms";
 import { dayLetterToWeekday } from "../utils/time";
 import { DAY_LABEL, DAYS } from "../utils/time";
+const ROLLING_WEEKS = 4;
+
+function nextDateForWeekday(
+  from: Date,
+  targetWeekday1to7: number,
+  hour: number,
+  minute: number
+) {
+  const targetJS = targetWeekday1to7 === 7 ? 6 : targetWeekday1to7 - 1;
+  const d = new Date(from);
+  d.setHours(hour, minute, 0, 0);
+
+  const dayDiff = (targetJS - d.getDay() + 7) % 7;
+  if (dayDiff === 0 && d <= from) {
+    d.setDate(d.getDate() + 7);
+  } else {
+    d.setDate(d.getDate() + dayDiff);
+  }
+  return d;
+}
+
+function nextNWeeklyDates(
+  from: Date,
+  targetWeekday1to7: number,
+  hour: number,
+  minute: number,
+  nWeeks: number
+) {
+  const dates: Date[] = [];
+  let first = nextDateForWeekday(from, targetWeekday1to7, hour, minute);
+  dates.push(first);
+  for (let i = 1; i < nWeeks; i++) {
+    const d = new Date(first);
+    d.setDate(d.getDate() + 7 * i);
+    dates.push(d);
+  }
+  return dates;
+}
 
 function buildBody(alarm: Alarm, timeText: string) {
   if (alarm.type === "subject") return `Clase / Materia a las ${timeText}.`;
@@ -37,10 +75,13 @@ async function scheduleOne(
 
   const trigger: any = opts.weekday
     ? {
-        weekday: opts.weekday,
-        hour: opts.hour,
-        minute: opts.minute,
-        repeats: true,
+        type: Notifications.SchedulableTriggerInputTypes.DATE,
+        date: nextDateForWeekday(
+          new Date(),
+          opts.weekday,
+          opts.hour,
+          opts.minute
+        ),
         channelId: Platform.OS === "android" ? androidChannelId : undefined,
       }
     : {
@@ -139,34 +180,96 @@ export async function scheduleAlarm(alarm: Alarm) {
   if (alarm.repeatType === "custom") {
     if (alarm.customByDay && Object.keys(alarm.customByDay).length) {
       const map = alarm.customByDay as DayMap;
+      const now = new Date();
+
       for (const letter of Object.keys(map)) {
         const weekday = dayLetterToWeekday(letter);
         for (const t of map[letter]) {
           const { hour, minute, text } = parseHHmm(t);
-          await scheduleOne(alarm, {
+          const dates = nextNWeeklyDates(
+            now,
             weekday,
             hour,
             minute,
-            text,
-            repeats: true,
-          });
+            ROLLING_WEEKS
+          );
+
+          for (const date of dates) {
+            await Notifications.scheduleNotificationAsync({
+              content: {
+                title: alarm.title || "Alarma",
+                body: buildBody(alarm, text),
+                data: { alarmId: alarm.id, type: alarm.type, time: text },
+                sound:
+                  Platform.OS === "ios"
+                    ? alarm.tone === "bell"
+                      ? "bell"
+                      : "default"
+                    : "default",
+                priority: Notifications.AndroidNotificationPriority.HIGH,
+              },
+              trigger:
+                Platform.OS === "android"
+                  ? {
+                      type: Notifications.SchedulableTriggerInputTypes.DATE,
+                      date,
+                      channelId:
+                        alarm.tone === "bell" ? "alarm-bell" : "default",
+                    }
+                  : {
+                      type: Notifications.SchedulableTriggerInputTypes.DATE,
+                      date,
+                    },
+            });
+          }
         }
       }
       return;
     }
 
     if (alarm.repeatDays?.length && alarm.times?.length) {
+      const now = new Date();
+
       for (const letter of alarm.repeatDays) {
         const weekday = dayLetterToWeekday(letter);
         for (const t of alarm.times) {
           const { hour, minute, text } = parseHHmm(t);
-          await scheduleOne(alarm, {
+          const dates = nextNWeeklyDates(
+            now,
             weekday,
             hour,
             minute,
-            text,
-            repeats: true,
-          });
+            ROLLING_WEEKS
+          );
+
+          for (const date of dates) {
+            await Notifications.scheduleNotificationAsync({
+              content: {
+                title: alarm.title || "Alarma",
+                body: buildBody(alarm, text),
+                data: { alarmId: alarm.id, type: alarm.type, time: text },
+                sound:
+                  Platform.OS === "ios"
+                    ? alarm.tone === "bell"
+                      ? "bell"
+                      : "default"
+                    : "default",
+                priority: Notifications.AndroidNotificationPriority.HIGH,
+              },
+              trigger:
+                Platform.OS === "android"
+                  ? {
+                      type: Notifications.SchedulableTriggerInputTypes.DATE,
+                      date,
+                      channelId:
+                        alarm.tone === "bell" ? "alarm-bell" : "default",
+                    }
+                  : {
+                      type: Notifications.SchedulableTriggerInputTypes.DATE,
+                      date,
+                    },
+            });
+          }
         }
       }
       return;

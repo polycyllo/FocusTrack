@@ -137,15 +137,28 @@ export const AlarmsProvider: React.FC<{ children: React.ReactNode }> = ({
     await AsyncStorage.setItem(KEY_LIST, JSON.stringify(list));
   }, []);
 
+  const reseedAllActive = useCallback(async (list: Alarm[]) => {
+    try {
+      await cancelAllAlarms();
+      const actives = list.filter((a) => a.active);
+      await Promise.allSettled(actives.map((a) => scheduleAlarm(a)));
+    } catch (e) {
+      console.warn("reseedAllActive failed", e);
+    }
+  }, []);
+
   const bootstrap = useCallback(async () => {
     if (hydrated) return;
     setLoading(true);
     try {
       const raw = await AsyncStorage.getItem(KEY_LIST);
       const last = await AsyncStorage.getItem(KEY_LAST_TONE);
+
+      let loadedList: Alarm[] = [];
       if (raw) {
         const parsed: Alarm[] = JSON.parse(raw);
-        setAlarms(orderedByActivesAndTime(parsed));
+        loadedList = orderedByActivesAndTime(parsed);
+        setAlarms(loadedList);
       } else {
         const now = new Date();
         const base: (Alarm & { customByDay?: Record<string, string[]> })[] = [
@@ -180,10 +193,14 @@ export const AlarmsProvider: React.FC<{ children: React.ReactNode }> = ({
             createdAt: now.toISOString(),
           },
         ] as any;
-        setAlarms(orderedByActivesAndTime(base as any));
-        await persist(base as any);
+        loadedList = orderedByActivesAndTime(base as any);
+        setAlarms(loadedList);
+        await persist(loadedList);
       }
+
       if (last) setLastToneState(last);
+
+      reseedAllActive(loadedList);
     } catch (e: any) {
       setError(e?.message ?? "Error al cargar alarmas");
     } finally {
@@ -211,12 +228,11 @@ export const AlarmsProvider: React.FC<{ children: React.ReactNode }> = ({
       const next = orderedByActivesAndTime([...alarms, alarm]);
       setAlarms(next);
       await persist(next);
-      await scheduleAlarm(alarm);
-      try {
-        await presentStatusNotification("created", alarm);
-      } catch (e) {
-        console.warn("status-noti:create failed", e);
-      }
+      presentStatusNotification("created", alarm).catch((e) =>
+        console.warn("status-noti:create failed", e)
+      );
+
+      reseedAllActive(next);
 
       return alarm;
     },
@@ -262,15 +278,11 @@ export const AlarmsProvider: React.FC<{ children: React.ReactNode }> = ({
       setAlarms(ordered);
       await persist(ordered);
 
-      await cancelAllAlarms();
-      const actives = ordered.filter((a) => a.active);
-      for (const a of actives) await scheduleAlarm(a);
+      presentStatusNotification("updated", merged).catch((e) =>
+        console.warn("status-noti:update failed", e)
+      );
 
-      try {
-        await presentStatusNotification("updated", merged);
-      } catch (e) {
-        console.warn("status-noti:update failed", e);
-      }
+      reseedAllActive(ordered);
 
       return merged;
     },
@@ -282,20 +294,14 @@ export const AlarmsProvider: React.FC<{ children: React.ReactNode }> = ({
       const next = alarms.map((a) => (a.id === id ? { ...a, active } : a));
       setAlarms(orderedByActivesAndTime(next));
       await persist(next);
-      await cancelAllAlarms();
-      const actives = next.filter((a) => a.active);
-      for (const alarm of actives) {
-        await scheduleAlarm(alarm);
-      }
       const changed = next.find((a) => a.id === id)!;
-      try {
-        await presentStatusNotification(
-          active ? "activated" : "deactivated",
-          changed
-        );
-      } catch (e) {
-        console.warn("status-noti:toggle failed", e);
-      }
+
+      presentStatusNotification(
+        active ? "activated" : "deactivated",
+        changed
+      ).catch((e) => console.warn("status-noti:toggle failed", e));
+
+      reseedAllActive(next);
     },
     [alarms, persist]
   );
@@ -307,18 +313,14 @@ export const AlarmsProvider: React.FC<{ children: React.ReactNode }> = ({
       const next = alarms.filter((a) => a.id !== id);
       setAlarms(orderedByActivesAndTime(next));
       await persist(next);
-      await cancelAllAlarms();
-
-      const actives = next.filter((a) => a.active);
-      for (const alarm of actives) {
-        await scheduleAlarm(alarm);
-      }
 
       if (toDeleteRef) {
-        await presentStatusNotification("removed", {
+        presentStatusNotification("removed", {
           ...(toDeleteRef as any),
-        } as Alarm);
+        } as Alarm).catch((e) => console.warn("status-noti:remove failed", e));
       }
+
+      reseedAllActive(next);
     },
     [alarms, persist]
   );
