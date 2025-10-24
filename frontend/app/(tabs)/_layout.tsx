@@ -59,7 +59,6 @@ export default function TabLayout() {
           name="Pomodoro"
           options={{ title: "Pomodoro", headerShown: false }}
         />
-        {/* Pestaña de Alarmas */}
         <Tabs.Screen
           name="alarms"
           options={{

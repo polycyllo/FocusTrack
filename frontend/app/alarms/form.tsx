@@ -41,17 +41,19 @@ export default function AlarmForm() {
   const router = useRouter();
   const { id, type } = useLocalSearchParams<{
     id?: string;
-    type?: "subject" | "task" | "other";
+    type?: "subject" | "task";
   }>();
 
-  const { getById, create, update, bootstrap } = useAlarms();
+  const { getById, create, update, bootstrap, hydrated } = useAlarms();
 
   const editing = !!id;
   const original = editing ? getById(id!) : undefined;
 
   const [title, setTitle] = useState(original?.title ?? "");
-  const [alarmType, setAlarmType] = useState<"subject" | "task" | "other">(
-    original?.type ?? (type as any) ?? "subject"
+  const [alarmType, setAlarmType] = useState<"subject" | "task">(
+    (original?.type as "subject" | "task") ??
+      (type as "subject" | "task") ??
+      "subject"
   );
 
   const [repeatType, setRepeatType] = useState<"once" | "daily" | "custom">(
@@ -76,7 +78,6 @@ export default function AlarmForm() {
   const [perDay, setPerDay] = useState<boolean>(!!originalMap);
   const [customByDay, setCustomByDay] = useState<DayMap>(() => {
     if (originalMap) return structuredClone(originalMap);
-    // si no hay, inicializamos vacío
     return {};
   });
 
@@ -90,10 +91,40 @@ export default function AlarmForm() {
   useEffect(() => {
     bootstrap();
   }, []);
+  useEffect(() => {
+    if (!editing) return;
+    if (!hydrated) return;
+    const o = getById(id!);
+    if (!o) return;
+
+    setTitle(o.title ?? "");
+    setAlarmType((o.type as any) ?? "subject");
+    setRepeatType(o.repeatType ?? "daily");
+
+    setDate(o.date ? new Date(o.date) : null);
+    setTime(o.time ?? "08:00");
+    setTimes(o.times ?? ["08:00"]);
+    setRepeatDays(o.repeatDays ?? []);
+
+    const map = (o as any).customByDay ?? null;
+    if (map && Object.keys(map).length > 0) {
+      setPerDay(true);
+      setRepeatDays(Object.keys(map));
+      setCustomByDay(map);
+    } else {
+      setPerDay(false);
+      setCustomByDay({});
+    }
+
+    setTone(o.tone ?? "bell");
+    setVibration(typeof o.vibration === "boolean" ? o.vibration : true);
+  }, [editing, hydrated, id, getById]);
 
   useEffect(() => {
     if (!perDay || repeatType !== "custom") return;
     setCustomByDay((prev) => {
+      if (!repeatDays || repeatDays.length === 0) return prev;
+
       const next: DayMap = { ...prev };
       for (const d of repeatDays) {
         if (!next[d]) next[d] = ["08:00"];
@@ -108,6 +139,36 @@ export default function AlarmForm() {
   const onSave = async () => {
     try {
       setSaving(true);
+      const prevCustomByDay = (original as any)?.customByDay ?? null;
+      const prevRepeatDays = (original as any)?.repeatDays ?? null;
+      const prevTimes = (original as any)?.times ?? null;
+
+      let customByDayToSave = perDay ? customByDay ?? null : null;
+      let repeatDaysToSave = !perDay ? repeatDays ?? null : null;
+      let timesToSave = !perDay ? times ?? null : null;
+
+      if (repeatType === "custom") {
+        const hasPerDayNow =
+          !!customByDayToSave && Object.keys(customByDayToSave).length > 0;
+        const hasPlainNow = !!repeatDaysToSave?.length && !!timesToSave?.length;
+
+        if (!hasPerDayNow && !hasPlainNow) {
+          const hadPerDayPrev =
+            !!prevCustomByDay && Object.keys(prevCustomByDay).length > 0;
+          const hadPlainPrev = !!prevRepeatDays?.length && !!prevTimes?.length;
+
+          if (editing && (hadPerDayPrev || hadPlainPrev)) {
+            customByDayToSave = hadPerDayPrev ? prevCustomByDay : null;
+            repeatDaysToSave = hadPlainPrev ? prevRepeatDays : null;
+            timesToSave = hadPlainPrev ? prevTimes : null;
+          } else {
+            alert("Selecciona días y horas para la recurrencia personalizada.");
+            setSaving(false);
+            return;
+          }
+        }
+      }
+
       const payload: AlarmInput & { customByDay?: DayMap | null } = {
         title: title.trim() || "Alarma",
         type: alarmType,
@@ -120,27 +181,14 @@ export default function AlarmForm() {
               : null
             : null,
         time: repeatType !== "custom" ? time : null,
-        times:
-          repeatType === "custom" && !perDay
-            ? times?.length
-              ? times
-              : null
-            : null,
+        times: repeatType === "custom" && !perDay ? timesToSave ?? null : null,
         repeatDays:
-          repeatType === "custom" && !perDay
-            ? repeatDays?.length
-              ? repeatDays
-              : null
-            : null,
+          repeatType === "custom" && !perDay ? repeatDaysToSave ?? null : null,
         tone,
         vibration,
-        active: true,
+        active: editing ? !!original?.active : true,
         customByDay:
-          repeatType === "custom" && perDay
-            ? Object.keys(customByDay).length
-              ? customByDay
-              : null
-            : null,
+          repeatType === "custom" && perDay ? customByDayToSave ?? null : null,
       };
 
       let res: Alarm;
@@ -163,7 +211,6 @@ export default function AlarmForm() {
     const options = [
       { key: "subject", label: "Materia", icon: "book-open-variant" },
       { key: "task", label: "Tarea", icon: "file-document-outline" },
-      { key: "other", label: "Otro", icon: "head-lightbulb-outline" },
     ] as const;
 
     return (

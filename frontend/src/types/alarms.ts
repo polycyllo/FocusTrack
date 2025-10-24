@@ -1,5 +1,7 @@
 export type RepeatType = "once" | "daily" | "custom";
-export type AlarmType = "subject" | "task" | "other";
+export type AlarmType = "subject" | "task";
+
+export type DayMap = Record<string, string[]>;
 
 export type Alarm = {
   id: string;
@@ -12,6 +14,7 @@ export type Alarm = {
   time?: string | null;
   times?: string[] | null;
   repeatDays?: string[] | null;
+  customByDay?: DayMap | null;
 
   tone: string;
   vibration: boolean;

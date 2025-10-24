@@ -26,8 +26,27 @@ export function repeatToText(a: {
 }
 
 export function compareTimeAsc(a: string, b: string) {
-  // '08:00' → 800
   const A = parseInt(a.replace(":", ""), 10);
   const B = parseInt(b.replace(":", ""), 10);
   return A - B;
+}
+export function dayLetterToWeekday(d: string): number {
+  switch (d) {
+    case "D":
+      return 1;
+    case "L":
+      return 2;
+    case "M":
+      return 3;
+    case "X":
+      return 4;
+    case "J":
+      return 5;
+    case "V":
+      return 6;
+    case "S":
+      return 7;
+    default:
+      return 2;
+  }
 }
