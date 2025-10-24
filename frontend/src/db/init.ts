@@ -26,8 +26,12 @@ CREATE TABLE IF NOT EXISTS task (
   status INTEGER NOT NULL DEFAULT 0,
   due_at TEXT,
   priority TEXT DEFAULT 'medium',
-  subject_id INTEGER,
-  task_type_id INTEGER
+  color TEXT,
+  icon TEXT,
+  created_at TEXT DEFAULT (datetime('now')),
+  subject_id INTEGER NOT NULL,
+  task_type_id INTEGER,
+  FOREIGN KEY(subject_id) REFERENCES subject(subject_id) ON DELETE CASCADE
 );
 
 CREATE TABLE IF NOT EXISTS schedule (
@@ -68,4 +72,16 @@ CREATE INDEX IF NOT EXISTS idx_reminder_due ON reminder (status, due_at);
 `
 
   sqlite.execSync(sql)
+
+  const ensureTaskColumn = (name: string, definition: string) => {
+    try {
+      sqlite.execSync(`ALTER TABLE task ADD COLUMN ${definition}`)
+    } catch (error) {
+      // column already exists
+    }
+  }
+
+  ensureTaskColumn('color', 'color TEXT')
+  ensureTaskColumn('icon', 'icon TEXT')
+  ensureTaskColumn('created_at', "created_at TEXT DEFAULT (datetime('now'))")
 }
