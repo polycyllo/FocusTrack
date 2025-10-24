@@ -1,6 +1,7 @@
 import * as Notifications from "expo-notifications";
 import { Platform } from "react-native";
-import { Alarm } from "../types/alarms";
+import { Alarm, DayMap } from "../types/alarms";
+import { dayLetterToWeekday } from "../utils/time";
 
 function buildBody(alarm: Alarm, timeText: string) {
   if (alarm.type === "subject") return `Clase / Materia a las ${timeText}.`;
@@ -8,44 +9,22 @@ function buildBody(alarm: Alarm, timeText: string) {
   return `Recordatorio a las ${timeText}.`;
 }
 
-export async function scheduleAlarm(alarm: Alarm) {
-  if (!alarm.active) return;
+function parseHHmm(t: string): { hour: number; minute: number; text: string } {
+  const [h, m] = t.split(":").map(Number);
+  const text = `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
+  return { hour: h, minute: m, text };
+}
 
-  const t = alarm.time ?? alarm.times?.[0];
-  if (!t) return;
-
-  const [hour, minute] = t.split(":").map(Number);
-  const timeText = `${String(hour).padStart(2, "0")}:${String(minute).padStart(
-    2,
-    "0"
-  )}`;
-
-  let trigger: Notifications.DailyTriggerInput | Notifications.DateTriggerInput;
-
-  if (alarm.repeatType === "daily") {
-    trigger = {
-      type: Notifications.SchedulableTriggerInputTypes.DAILY,
-      hour,
-      minute,
-    };
-  } else if (alarm.repeatType === "once" && alarm.date) {
-    const [y, m, d] = alarm.date.split("-").map(Number);
-    const when = new Date(y, (m ?? 1) - 1, d, hour, minute, 0, 0);
-    trigger = {
-      type: Notifications.SchedulableTriggerInputTypes.DATE,
-      date: when,
-    };
-  } else {
-    const now = new Date();
-    const when = new Date(now);
-    when.setHours(hour, minute, 0, 0);
-    if (when.getTime() <= now.getTime()) when.setDate(when.getDate() + 1);
-    trigger = {
-      type: Notifications.SchedulableTriggerInputTypes.DATE,
-      date: when,
-    };
+async function scheduleOne(
+  alarm: Alarm,
+  opts: {
+    weekday?: number;
+    hour: number;
+    minute: number;
+    text: string;
+    repeats?: boolean;
   }
-
+) {
   const androidChannelId = alarm.tone === "bell" ? "alarm-bell" : "default";
 
   const iosSound: Notifications.NotificationContentInput["sound"] =
@@ -55,19 +34,149 @@ export async function scheduleAlarm(alarm: Alarm) {
         : "default"
       : undefined;
 
+  const trigger: any = opts.weekday
+    ? {
+        weekday: opts.weekday,
+        hour: opts.hour,
+        minute: opts.minute,
+        repeats: true,
+        channelId: Platform.OS === "android" ? androidChannelId : undefined,
+      }
+    : {
+        type: Notifications.SchedulableTriggerInputTypes.DATE,
+        date: (() => {
+          const now = new Date();
+          const when = new Date(now);
+          when.setHours(opts.hour, opts.minute, 0, 0);
+          if (when.getTime() <= now.getTime()) when.setDate(when.getDate() + 1);
+          return when;
+        })(),
+        channelId: Platform.OS === "android" ? androidChannelId : undefined,
+      };
+
   await Notifications.scheduleNotificationAsync({
     content: {
       title: alarm.title || "Alarma",
-      body: buildBody(alarm, timeText),
-      data: { alarmId: alarm.id, type: alarm.type, time: t },
+      body: buildBody(alarm, opts.text),
+      data: { alarmId: alarm.id, type: alarm.type, time: opts.text },
       sound: iosSound ?? "default",
       priority: Notifications.AndroidNotificationPriority.HIGH,
     },
-    trigger:
-      Platform.OS === "android"
-        ? { ...trigger, channelId: androidChannelId as any }
-        : trigger,
+    trigger,
   });
+}
+
+export async function scheduleAlarm(alarm: Alarm) {
+  if (!alarm.active) return;
+
+  if (alarm.repeatType === "daily") {
+    const base = alarm.time ?? alarm.times?.[0];
+    if (!base) return;
+    const { hour, minute, text } = parseHHmm(base);
+    await Notifications.scheduleNotificationAsync({
+      content: {
+        title: alarm.title || "Alarma",
+        body: buildBody(alarm, text),
+        data: { alarmId: alarm.id, type: alarm.type, time: text },
+        sound:
+          Platform.OS === "ios"
+            ? alarm.tone === "bell"
+              ? "bell"
+              : "default"
+            : "default",
+        priority: Notifications.AndroidNotificationPriority.HIGH,
+      },
+      trigger:
+        Platform.OS === "android"
+          ? {
+              type: Notifications.SchedulableTriggerInputTypes.DAILY,
+              hour,
+              minute,
+              channelId: alarm.tone === "bell" ? "alarm-bell" : "default",
+            }
+          : {
+              type: Notifications.SchedulableTriggerInputTypes.DAILY,
+              hour,
+              minute,
+            },
+    });
+    return;
+  }
+
+  if (alarm.repeatType === "once" && alarm.date) {
+    const { hour, minute, text } = parseHHmm(alarm.time ?? "08:00");
+    const [y, m, d] = alarm.date.split("-").map(Number);
+    const when = new Date(y, (m ?? 1) - 1, d, hour, minute, 0, 0);
+    await Notifications.scheduleNotificationAsync({
+      content: {
+        title: alarm.title || "Alarma",
+        body: buildBody(alarm, text),
+        data: { alarmId: alarm.id, type: alarm.type, time: text },
+        sound:
+          Platform.OS === "ios"
+            ? alarm.tone === "bell"
+              ? "bell"
+              : "default"
+            : "default",
+        priority: Notifications.AndroidNotificationPriority.HIGH,
+      },
+      trigger:
+        Platform.OS === "android"
+          ? {
+              type: Notifications.SchedulableTriggerInputTypes.DATE,
+              date: when,
+              channelId: alarm.tone === "bell" ? "alarm-bell" : "default",
+            }
+          : {
+              type: Notifications.SchedulableTriggerInputTypes.DATE,
+              date: when,
+            },
+    });
+    return;
+  }
+
+  if (alarm.repeatType === "custom") {
+    if (alarm.customByDay && Object.keys(alarm.customByDay).length) {
+      const map = alarm.customByDay as DayMap;
+      for (const letter of Object.keys(map)) {
+        const weekday = dayLetterToWeekday(letter);
+        for (const t of map[letter]) {
+          const { hour, minute, text } = parseHHmm(t);
+          await scheduleOne(alarm, {
+            weekday,
+            hour,
+            minute,
+            text,
+            repeats: true,
+          });
+        }
+      }
+      return;
+    }
+
+    if (alarm.repeatDays?.length && alarm.times?.length) {
+      for (const letter of alarm.repeatDays) {
+        const weekday = dayLetterToWeekday(letter);
+        for (const t of alarm.times) {
+          const { hour, minute, text } = parseHHmm(t);
+          await scheduleOne(alarm, {
+            weekday,
+            hour,
+            minute,
+            text,
+            repeats: true,
+          });
+        }
+      }
+      return;
+    }
+
+    const base = alarm.time ?? alarm.times?.[0];
+    if (base) {
+      const { hour, minute, text } = parseHHmm(base);
+      await scheduleOne(alarm, { hour, minute, text });
+    }
+  }
 }
 
 export async function cancelAllAlarms() {

@@ -241,7 +241,13 @@ export const AlarmsProvider: React.FC<{ children: React.ReactNode }> = ({
       const ordered = orderedByActivesAndTime(next);
       setAlarms(ordered);
       await persist(ordered);
-      await scheduleAlarm(merged);
+
+      await cancelAllAlarms();
+      const actives = ordered.filter((a) => a.active);
+      for (const a of actives) {
+        await scheduleAlarm(a);
+      }
+
       return merged;
     },
     [alarms, persist]
