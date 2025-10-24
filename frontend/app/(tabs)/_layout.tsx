@@ -59,6 +59,14 @@ export default function TabLayout() {
         name="Pomodoro"
         options={{ title: "Pomodoro", headerShown: false }}
       />
+      <Tabs.Screen
+        name="tasks"
+        options={{
+          title: "Crear Tarea",
+          headerShown: false,
+          tabBarIcon: ({ color }) => <TabBarIcon name="plus-square" color={color} />,
+        }}
+      />
     </Tabs>
   );
 }
