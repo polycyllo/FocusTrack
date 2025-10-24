@@ -1,13 +1,15 @@
-import React, { useEffect, useCallback, useState } from "react";
-import { Alert, Pressable, Text } from "react-native";
+import React, { useState, useEffect, useCallback } from "react";
+import {
+  View,
+  Text,
+  Pressable,
+  StyleSheet,
+  SafeAreaView,
+  FlatList,
+  Alert,
+} from "react-native";
 import { useRouter, Href, useFocusEffect } from "expo-router";
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
-import { ListLayout } from "@/components/layouts/ListLayout";
-import {
-  SubjectCardLayout,
-  SUBJECT_CARD_COLORS,
-  subjectCardStyles,
-} from "@/components/cards/SubjectCardLayout";
 import { usePomodoroStore } from "@/src/store/pomodoro.store";
 import { useAuthStore } from "@/src/store/auth.store";
 import { 
@@ -42,16 +44,6 @@ type ScheduleFromDB = {
   status?: number | null;
   subjectId?: number;
   subject_id?: number;
-};
-
-const COLORS = {
-  background: "#9ECDF2",
-  header: "#4A90E2",
-  button: "#70B1EA",
-  card: "#4A90E2",
-  cardText: "#ffffff",
-  chipBg: "rgba(255,255,255,0.18)",
-  chipBorder: "rgba(255,255,255,0.28)",
 };
 
 export default function SubjectsScreen() {
@@ -180,10 +172,10 @@ export default function SubjectsScreen() {
   );
 }
 
-function SubjectCard({
-  item,
-  onDeleted,
-}: {
+function SubjectCard({ 
+  item, 
+  onDeleted 
+}: { 
   item: { subject: SubjectFromDB; schedules: ScheduleFromDB[] };
   onDeleted: () => void;
 }) {
@@ -246,13 +238,10 @@ function SubjectCard({
               console.error("Error eliminando materia:", error);
               Alert.alert("Error", "No se pudo eliminar la materia");
             }
-          } catch (error) {
-            console.error("Error eliminando materia:", error);
-            Alert.alert("Error", "No se pudo eliminar la materia");
-          }
+          },
         },
-      },
-    ]);
+      ]
+    );
   };
 
   const cancelDelete = () => setDeleting(false);
@@ -287,87 +276,84 @@ function SubjectCard({
             <Ionicons name="book" size={18} color="#fff" />
           </View>
 
-  const actions = deleting ? (
-    <>
-      <Pressable
-        hitSlop={10}
-        style={[
-          subjectCardStyles.actionBtn,
-          { backgroundColor: "#e74c3c", borderColor: "#e74c3c" },
-        ]}
-        onPress={confirmDelete}
-      >
-        <MaterialCommunityIcons
-          name="trash-can-outline"
-          size={18}
-          color="#fff"
-        />
-      </Pressable>
+          <View style={{ flex: 1 }}>
+            <Text
+              numberOfLines={2}
+              ellipsizeMode="tail"
+              style={styles.cardTitle}
+            >
+              {item.subject.title || "Sin nombre"}
+            </Text>
+            {item.schedules && item.schedules.length > 0 && (
+              <Text style={styles.scheduleText}>
+                {item.schedules.length} horario{item.schedules.length !== 1 ? "s" : ""}
+              </Text>
+            )}
+          </View>
+        </View>
 
-      <Pressable
-        hitSlop={10}
-        style={[
-          subjectCardStyles.actionBtn,
-          { backgroundColor: "#95a5a6", borderColor: "#95a5a6" },
-        ]}
-        onPress={cancelDelete}
-      >
-        <MaterialCommunityIcons
-          name="close-circle-outline"
-          size={18}
-          color="#fff"
-        />
-      </Pressable>
-    </>
-  ) : (
-    <>
-      <Pressable
-        hitSlop={10}
-        style={subjectCardStyles.actionBtn}
-        onPress={openPomodoroConfig}
-      >
-        <MaterialCommunityIcons
-          name="timer-plus-outline"
-          size={18}
-          color="#fff"
-        />
-      </Pressable>
+        <View style={styles.actions}>
+          {deleting ? (
+            <>
+              <Pressable
+                hitSlop={10}
+                style={[
+                  styles.actionBtn,
+                  { backgroundColor: "#e74c3c", borderColor: "#e74c3c" },
+                ]}
+                onPress={confirmDelete}
+              >
+                <MaterialCommunityIcons
+                  name="trash-can-outline"
+                  size={18}
+                  color="#fff"
+                />
+              </Pressable>
 
-      <Pressable
-        hitSlop={10}
-        style={subjectCardStyles.actionBtn}
-        onPress={() => {
-          const sid = String(
-            item.subject.subjectId ?? item.subject.subject_id ?? ""
-          );
-          const title = item.subject.title || "";
-          router.push({
-            pathname: "/(tabs)/tasks",
-            params: { subjectId: sid, subjectTitle: title },
-          });
-        }}
-      >
-        <MaterialCommunityIcons
-          name="clipboard-check-multiple-outline"
-          size={18}
-          color="#fff"
-        />
-      </Pressable>
-    </>
-  );
+              <Pressable
+                hitSlop={10}
+                style={[
+                  styles.actionBtn,
+                  { backgroundColor: "#95a5a6", borderColor: "#95a5a6" },
+                ]}
+                onPress={cancelDelete}
+              >
+                <MaterialCommunityIcons
+                  name="close-circle-outline"
+                  size={18}
+                  color="#fff"
+                />
+              </Pressable>
+            </>
+          ) : (
+            <>
+              <Pressable
+                hitSlop={10}
+                style={styles.actionBtn}
+                onPress={openPomodoroConfig}
+              >
+                <MaterialCommunityIcons
+                  name="timer-plus-outline"
+                  size={18}
+                  color="#fff"
+                />
+              </Pressable>
 
-  return (
-    <GestureDetector gesture={longPressGesture}>
-      <SubjectCardLayout
-        Component={Animated.View}
-        containerProps={{ style: subjectCardStyles.card }}
-        overlay={<Animated.View style={fillStyle} />}
-        circleColor={item.subject.color || SUBJECT_CARD_COLORS.iconFallback}
-        icon={<Ionicons name="book" size={18} color="#fff" />}
-        title={item.subject.title || "Sin nombre"}
-        subtitle={subtitle}
-        actions={actions}
-      />
+              <Pressable
+                hitSlop={10}
+                style={styles.actionBtn}
+                onPress={() => {}}
+              >
+                <MaterialCommunityIcons
+                  name="clipboard-check-multiple-outline"
+                  size={18}
+                  color="#fff"
+                />
+              </Pressable>
+            </>
+          )}
+        </View>
+      </Animated.View>
     </GestureDetector>
   );
 }
