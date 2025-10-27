@@ -10,8 +10,10 @@ import {
 } from "react-native";
 import { useRouter, Href, useFocusEffect } from "expo-router";
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
+import Svg, { Path } from "react-native-svg";
 import { usePomodoroStore } from "@/src/store/pomodoro.store";
 import { useAuthStore } from "@/src/store/auth.store";
+import UserProfileModal from "@/components/UserProfileModal";
 import { 
   deleteSubjectWithSchedules, 
   getAllSubjectsWithSchedules 
@@ -46,13 +48,20 @@ type ScheduleFromDB = {
   subject_id?: number;
 };
 
+function UserIcon({ size = 24, color = "#fff" }: { size?: number; color?: string }) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 512 512" fill={color}>
+      <Path d="M406.5 399.6C387.4 352.9 341.5 320 288 320l-64 0c-53.5 0-99.4 32.9-118.5 79.6-35.6-37.3-57.5-87.9-57.5-143.6 0-114.9 93.1-208 208-208s208 93.1 208 208c0 55.7-21.9 106.2-57.5 143.6zm-40.1 32.7C334.4 452.4 296.6 464 256 464s-78.4-11.6-110.5-31.7c7.3-36.7 39.7-64.3 78.5-64.3l64 0c38.8 0 71.2 27.6 78.5 64.3zM256 512a256 256 0 1 0 0-512 256 256 0 1 0 0 512zm0-272a40 40 0 1 1 0-80 40 40 0 1 1 0 80zm-88-40a88 88 0 1 0 176 0 88 88 0 1 0 -176 0z" />
+    </Svg>
+  );
+}
+
 export default function SubjectsScreen() {
   const router = useRouter();
   const { isAuthenticated, user, logout } = useAuthStore();
   const [subjects, setSubjects] = useState<Array<{ subject: SubjectFromDB; schedules: ScheduleFromDB[] }>>([]);
   const [loading, setLoading] = useState(true);
-
-  // NO bloqueamos el acceso, permitimos uso sin login
+  const [profileModalVisible, setProfileModalVisible] = useState(false);
 
   const loadSubjects = async () => {
     try {
@@ -79,28 +88,35 @@ export default function SubjectsScreen() {
 
   const goCreate = () => router.push("/(tabs)/subjects/create" as Href);
 
-  const handleAuthAction = () => {
+  const handleUserIconPress = () => {
     if (isAuthenticated) {
-      // Si está logueado, mostrar opción de logout
-      Alert.alert(
-        "Cerrar sesión",
-        `¿Deseas cerrar sesión como ${user?.name}?`,
-        [
-          { text: "Cancelar", style: "cancel" },
-          {
-            text: "Cerrar sesión",
-            style: "destructive",
-            onPress: () => {
-              logout();
-              Alert.alert("Sesión cerrada", "Has cerrado sesión exitosamente");
-            },
-          },
-        ]
-      );
+      setProfileModalVisible(true);
     } else {
-      // Si no está logueado, ir a login
       router.push("/auth/login" as Href);
     }
+  };
+
+  const handleLogout = () => {
+    Alert.alert(
+      "Cerrar sesión",
+      `¿Deseas cerrar sesión como ${user?.name}?`,
+      [
+        { text: "Cancelar", style: "cancel" },
+        {
+          text: "Cerrar sesión",
+          style: "destructive",
+          onPress: () => {
+            logout();
+            Alert.alert("Sesión cerrada", "Has cerrado sesión exitosamente");
+          },
+        },
+      ]
+    );
+  };
+
+  const handleStatistics = () => {
+    // Navegar a pantalla de estadísticas
+    Alert.alert("Implementar Estadísticas", "Aquí implementariamos las estadísticas del usuario");
   };
 
   return (
@@ -126,18 +142,15 @@ export default function SubjectsScreen() {
               <Text style={styles.createBtnText}>+ Crear</Text>
             </Pressable>
 
+            {/* Botón de usuario con icono SVG */}
             <Pressable
-              onPress={handleAuthAction}
+              onPress={handleUserIconPress}
               style={({ pressed }) => [
-                styles.authBtn,
+                styles.userBtn,
                 pressed && { opacity: 0.85 },
               ]}
             >
-              {isAuthenticated ? (
-                <Ionicons name="log-out-outline" size={20} color="#fff" />
-              ) : (
-                <Ionicons name="log-in-outline" size={20} color="#fff" />
-              )}
+              <UserIcon size={20} color="#fff" />
             </Pressable>
           </View>
         </View>
@@ -168,6 +181,14 @@ export default function SubjectsScreen() {
           />
         )}
       </View>
+
+      {/* Modal de perfil de usuario */}
+      <UserProfileModal
+        visible={profileModalVisible}
+        onClose={() => setProfileModalVisible(false)}
+        onLogout={handleLogout}
+        onStatistics={handleStatistics}
+      />
     </SafeAreaView>
   );
 }
@@ -398,7 +419,7 @@ const styles = StyleSheet.create({
     borderRadius: 10,
   },
   createBtnText: { color: "#fff", fontWeight: "600", fontSize: 12 },
-  authBtn: {
+  userBtn: {
     backgroundColor: "rgba(255,255,255,0.2)",
     padding: 8,
     borderRadius: 8,

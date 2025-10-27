@@ -23,6 +23,19 @@ export default function RegisterScreen() {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [passwordStrength, setPasswordStrength] = useState(0); 
+
+  // Función para evaluar la fortaleza de la contraseña
+  const evaluatePasswordStrength = (pass: string) => {
+    let strength = 0;
+
+    if (pass.length >= 6) strength += 1;
+    if (/[A-Z]/.test(pass)) strength += 1;
+    if (/\d/.test(pass)) strength += 1;
+    if (/[!@#$%^&*(),.?":{}|<>]/.test(pass)) strength += 1;
+
+    setPasswordStrength(strength);
+  };
 
   const handleRegister = async () => {
     // Validaciones
@@ -42,6 +55,16 @@ export default function RegisterScreen() {
       Alert.alert('Error', 'La contraseña debe tener al menos 6 caracteres');
       return;
     }
+
+    const passwordRegex = /^(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&()_+\-=\[\]{};':"\\|,.<>\/?]).+$/;
+    if (!passwordRegex.test(password)) {
+      Alert.alert(
+        'Contraseña insegura',
+        'La contraseña debe contener al menos una letra mayúscula, un número y un carácter especial.'
+      );
+      return;
+    }
+
     if (password !== confirmPassword) {
       Alert.alert('Error', 'Las contraseñas no coinciden');
       return;
@@ -121,7 +144,10 @@ export default function RegisterScreen() {
                 placeholder="Crea una contraseña segura"
                 placeholderTextColor="#999"
                 value={password}
-                onChangeText={setPassword}
+                onChangeText={(text) => {
+                  setPassword(text);
+                  evaluatePasswordStrength(text); 
+                }}
                 secureTextEntry={!showPassword}
                 editable={!isLoading}
               />
@@ -137,6 +163,33 @@ export default function RegisterScreen() {
                 />
               </Pressable>
             </View>
+
+            {/* Barra de fortaleza */}
+            <View style={styles.strengthBarContainer}>
+              <View
+                style={[
+                  styles.strengthBar,
+                  passwordStrength >= 1 && { backgroundColor: '#FF6B6B' },
+                  passwordStrength >= 2 && { backgroundColor: '#FFD93D' },
+                  passwordStrength >= 3 && { backgroundColor: '#6BCB77' },
+                  passwordStrength >= 4 && { backgroundColor: '#4A90E2' },
+                  { width: `${(passwordStrength / 4) * 100}%` },
+                ]}
+              />
+            </View>
+            {password.length > 0 && (
+              <Text style={styles.strengthText}>
+                {passwordStrength === 1
+                  ? 'Débil'
+                  : passwordStrength === 2
+                  ? 'Media'
+                  : passwordStrength === 3
+                  ? 'Fuerte'
+                  : passwordStrength === 4
+                  ? 'Muy fuerte'
+                  : ''}
+              </Text>
+            )}
           </View>
 
           {/* Campo de confirmar contraseña */}
@@ -273,6 +326,25 @@ const styles = StyleSheet.create({
   },
   eyeIcon: {
     padding: 4,
+  },
+  strengthBarContainer: {
+    height: 8,
+    backgroundColor: '#E0E0E0',
+    borderRadius: 10,
+    overflow: 'hidden',
+    marginTop: 8,
+  },
+  strengthBar: {
+    height: '100%',
+    width: '0%',
+    backgroundColor: '#E0E0E0',
+    borderRadius: 10,
+  },
+  strengthText: {
+    fontSize: 13,
+    color: '#666',
+    marginTop: 4,
+    textAlign: 'right',
   },
   submitButton: {
     backgroundColor: '#4A90E2',
