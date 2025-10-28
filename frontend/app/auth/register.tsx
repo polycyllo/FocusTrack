@@ -1,0 +1,380 @@
+import React, { useState } from 'react';
+import {
+  View,
+  Text,
+  StyleSheet,
+  Pressable,
+  SafeAreaView,
+  TextInput,
+  Alert,
+  ScrollView,
+  ActivityIndicator,
+} from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
+import { useRouter } from 'expo-router';
+import { useAuthStore } from '@/src/store/auth.store';
+
+export default function RegisterScreen() {
+  const router = useRouter();
+  const { register, isLoading } = useAuthStore();
+  
+  const [username, setUsername] = useState('');
+  const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [passwordStrength, setPasswordStrength] = useState(0); 
+
+  // Función para evaluar la fortaleza de la contraseña
+  const evaluatePasswordStrength = (pass: string) => {
+    let strength = 0;
+
+    if (pass.length >= 6) strength += 1;
+    if (/[A-Z]/.test(pass)) strength += 1;
+    if (/\d/.test(pass)) strength += 1;
+    if (/[!@#$%^&*(),.?":{}|<>]/.test(pass)) strength += 1;
+
+    setPasswordStrength(strength);
+  };
+
+  const handleRegister = async () => {
+    // Validaciones
+    if (!username.trim()) {
+      Alert.alert('Error', 'Por favor ingresa un nombre de usuario');
+      return;
+    }
+    if (username.length < 3) {
+      Alert.alert('Error', 'El nombre de usuario debe tener al menos 3 caracteres');
+      return;
+    }
+    if (!password) {
+      Alert.alert('Error', 'Por favor ingresa una contraseña');
+      return;
+    }
+    if (password.length < 6) {
+      Alert.alert('Error', 'La contraseña debe tener al menos 6 caracteres');
+      return;
+    }
+
+    const passwordRegex = /^(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&()_+\-=\[\]{};':"\\|,.<>\/?]).+$/;
+    if (!passwordRegex.test(password)) {
+      Alert.alert(
+        'Contraseña insegura',
+        'La contraseña debe contener al menos una letra mayúscula, un número y un carácter especial.'
+      );
+      return;
+    }
+
+    if (password !== confirmPassword) {
+      Alert.alert('Error', 'Las contraseñas no coinciden');
+      return;
+    }
+
+    const result = await register({ username, password });
+
+    if (result.success) {
+      Alert.alert('Éxito', 'Cuenta creada exitosamente', [
+        {
+          text: 'OK',
+          onPress: () => router.replace('/auth/login'),
+        },
+      ]);
+    } else {
+      Alert.alert('Error', result.error || 'Error al registrar usuario');
+    }
+  };
+
+  return (
+    <SafeAreaView style={styles.container}>
+      <ScrollView contentContainerStyle={styles.scrollContent}>
+        {/* Header con botón de regreso */}
+        <View style={styles.header}>
+          <Pressable
+            onPress={() => router.back()}
+            style={styles.backButton}
+            disabled={isLoading}
+          >
+            <Ionicons name="arrow-back" size={24} color="#4A90E2" />
+          </Pressable>
+          <Text style={styles.title}>Registrarse</Text>
+          <View style={{ width: 24 }} />
+        </View>
+
+        {/* Formulario */}
+        <View style={styles.formContainer}>
+          <View style={styles.logoSmall}>
+            <Ionicons name="time" size={60} color="#4A90E2" />
+            <Text style={styles.logoTextSmall}>FocusTrack</Text>
+          </View>
+
+          {/* Campo de usuario */}
+          <View style={styles.inputGroup}>
+            <Text style={styles.label}>Nombre de Usuario</Text>
+            <View style={styles.inputWrapper}>
+              <Ionicons
+                name="person-outline"
+                size={20}
+                color="#666"
+                style={styles.inputIcon}
+              />
+              <TextInput
+                style={styles.input}
+                placeholder="Elige un nombre de usuario"
+                placeholderTextColor="#999"
+                value={username}
+                onChangeText={setUsername}
+                autoCapitalize="none"
+                editable={!isLoading}
+              />
+            </View>
+          </View>
+
+          {/* Campo de contraseña */}
+          <View style={styles.inputGroup}>
+            <Text style={styles.label}>Contraseña</Text>
+            <View style={styles.inputWrapper}>
+              <Ionicons
+                name="lock-closed-outline"
+                size={20}
+                color="#666"
+                style={styles.inputIcon}
+              />
+              <TextInput
+                style={[styles.input, { flex: 1 }]}
+                placeholder="Crea una contraseña segura"
+                placeholderTextColor="#999"
+                value={password}
+                onChangeText={(text) => {
+                  setPassword(text);
+                  evaluatePasswordStrength(text); 
+                }}
+                secureTextEntry={!showPassword}
+                editable={!isLoading}
+              />
+              <Pressable
+                onPress={() => setShowPassword(!showPassword)}
+                style={styles.eyeIcon}
+                disabled={isLoading}
+              >
+                <Ionicons
+                  name={showPassword ? 'eye-off-outline' : 'eye-outline'}
+                  size={20}
+                  color="#666"
+                />
+              </Pressable>
+            </View>
+
+            {/* Barra de fortaleza */}
+            <View style={styles.strengthBarContainer}>
+              <View
+                style={[
+                  styles.strengthBar,
+                  passwordStrength >= 1 && { backgroundColor: '#FF6B6B' },
+                  passwordStrength >= 2 && { backgroundColor: '#FFD93D' },
+                  passwordStrength >= 3 && { backgroundColor: '#6BCB77' },
+                  passwordStrength >= 4 && { backgroundColor: '#4A90E2' },
+                  { width: `${(passwordStrength / 4) * 100}%` },
+                ]}
+              />
+            </View>
+            {password.length > 0 && (
+              <Text style={styles.strengthText}>
+                {passwordStrength === 1
+                  ? 'Débil'
+                  : passwordStrength === 2
+                  ? 'Media'
+                  : passwordStrength === 3
+                  ? 'Fuerte'
+                  : passwordStrength === 4
+                  ? 'Muy fuerte'
+                  : ''}
+              </Text>
+            )}
+          </View>
+
+          {/* Campo de confirmar contraseña */}
+          <View style={styles.inputGroup}>
+            <Text style={styles.label}>Confirmar Contraseña</Text>
+            <View style={styles.inputWrapper}>
+              <Ionicons
+                name="lock-closed-outline"
+                size={20}
+                color="#666"
+                style={styles.inputIcon}
+              />
+              <TextInput
+                style={[styles.input, { flex: 1 }]}
+                placeholder="Confirma tu contraseña"
+                placeholderTextColor="#999"
+                value={confirmPassword}
+                onChangeText={setConfirmPassword}
+                secureTextEntry={!showConfirmPassword}
+                editable={!isLoading}
+              />
+              <Pressable
+                onPress={() => setShowConfirmPassword(!showConfirmPassword)}
+                style={styles.eyeIcon}
+                disabled={isLoading}
+              >
+                <Ionicons
+                  name={showConfirmPassword ? 'eye-off-outline' : 'eye-outline'}
+                  size={20}
+                  color="#666"
+                />
+              </Pressable>
+            </View>
+          </View>
+
+          {/* Botón de registro */}
+          <Pressable
+            style={({ pressed }) => [
+              styles.submitButton,
+              pressed && { opacity: 0.85 },
+              isLoading && styles.submitButtonDisabled,
+            ]}
+            onPress={handleRegister}
+            disabled={isLoading}
+          >
+            {isLoading ? (
+              <ActivityIndicator color="#fff" />
+            ) : (
+              <Text style={styles.submitButtonText}>Registrarse</Text>
+            )}
+          </Pressable>
+
+          {/* Link a login */}
+          <View style={styles.footer}>
+            <Text style={styles.footerText}>¿Ya tienes cuenta?</Text>
+            <Pressable 
+              onPress={() => router.push('/auth/login')}
+              disabled={isLoading}
+            >
+              <Text style={styles.footerLink}>Inicia sesión aquí</Text>
+            </Pressable>
+          </View>
+        </View>
+      </ScrollView>
+    </SafeAreaView>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: '#F5F7FA',
+  },
+  scrollContent: {
+    flexGrow: 1,
+  },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingVertical: 16,
+    backgroundColor: '#fff',
+    borderBottomWidth: 1,
+    borderBottomColor: '#E0E0E0',
+  },
+  backButton: {
+    padding: 4,
+  },
+  title: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#0A0A0A',
+  },
+  formContainer: {
+    padding: 24,
+  },
+  logoSmall: {
+    alignItems: 'center',
+    marginBottom: 32,
+  },
+  logoTextSmall: {
+    fontSize: 28,
+    fontWeight: '800',
+    color: '#4A90E2',
+    marginTop: 8,
+  },
+  inputGroup: {
+    marginBottom: 20,
+  },
+  label: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#0A0A0A',
+    marginBottom: 8,
+  },
+  inputWrapper: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#E0E0E0',
+    paddingHorizontal: 12,
+  },
+  inputIcon: {
+    marginRight: 8,
+  },
+  input: {
+    flex: 1,
+    paddingVertical: 14,
+    fontSize: 16,
+    color: '#0A0A0A',
+  },
+  eyeIcon: {
+    padding: 4,
+  },
+  strengthBarContainer: {
+    height: 8,
+    backgroundColor: '#E0E0E0',
+    borderRadius: 10,
+    overflow: 'hidden',
+    marginTop: 8,
+  },
+  strengthBar: {
+    height: '100%',
+    width: '0%',
+    backgroundColor: '#E0E0E0',
+    borderRadius: 10,
+  },
+  strengthText: {
+    fontSize: 13,
+    color: '#666',
+    marginTop: 4,
+    textAlign: 'right',
+  },
+  submitButton: {
+    backgroundColor: '#4A90E2',
+    borderRadius: 12,
+    paddingVertical: 16,
+    alignItems: 'center',
+    marginTop: 12,
+  },
+  submitButtonDisabled: {
+    opacity: 0.6,
+  },
+  submitButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '700',
+  },
+  footer: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginTop: 24,
+    gap: 4,
+  },
+  footerText: {
+    fontSize: 14,
+    color: '#666',
+  },
+  footerLink: {
+    fontSize: 14,
+    color: '#4A90E2',
+    fontWeight: '600',
+  },
+});
