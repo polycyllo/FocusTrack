@@ -7,7 +7,7 @@ import {
 import { useFonts } from "expo-font";
 import { Stack } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import "react-native-reanimated";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { useColorScheme } from "@/components/useColorScheme";
@@ -15,6 +15,7 @@ import { ensureSchema } from "../src/db/init";
 import { db } from "../src/db/db";
 import { student } from "../src/db/schemas/Student";
 import { eq } from "drizzle-orm";
+import * as Notifications from "expo-notifications";
 
 export { ErrorBoundary } from "expo-router";
 
@@ -23,6 +24,15 @@ export const unstable_settings = {
 };
 
 SplashScreen.preventAutoHideAsync();
+
+Notifications.setNotificationHandler({
+  handleNotification: async () => ({
+    shouldPlaySound: true,
+    shouldSetBadge: false,
+    shouldShowBanner: true as any,
+    shouldShowList: true as any,
+  }),
+});
 
 export default function RootLayout() {
   const [loaded, error] = useFonts({
@@ -38,6 +48,30 @@ export default function RootLayout() {
     if (!loaded) return;
 
     (async () => {
+      const { status } = await Notifications.getPermissionsAsync();
+      if (status !== "granted") {
+        await Notifications.requestPermissionsAsync();
+      }
+
+      await Notifications.setNotificationChannelAsync("default", {
+        name: "Recordatorios",
+        importance: Notifications.AndroidImportance.HIGH,
+        sound: "default",
+        vibrationPattern: [250, 250, 250, 250],
+        lockscreenVisibility:
+          Notifications.AndroidNotificationVisibility.PUBLIC,
+        bypassDnd: false,
+      });
+
+      await Notifications.setNotificationChannelAsync("alarm-bell", {
+        name: "Alarmas (Campana)",
+        importance: Notifications.AndroidImportance.HIGH,
+        sound: "bell",
+        vibrationPattern: [250, 250, 250, 250],
+        lockscreenVisibility:
+          Notifications.AndroidNotificationVisibility.PUBLIC,
+        bypassDnd: false,
+      });
       ensureSchema();
 
       const pepitoEmail = "pepito@gmail.com";

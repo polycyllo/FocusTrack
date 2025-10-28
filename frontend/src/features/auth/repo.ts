@@ -19,7 +19,7 @@ export type AuthUser = {
 };
 
 /**
- * Registra un nuevo usuario en la bdgit 
+ * Registra un nuevo usuario en la base de datos
  */
 export async function registerUser(data: RegisterInput): Promise<{ success: boolean; error?: string; user?: AuthUser }> {
   try {

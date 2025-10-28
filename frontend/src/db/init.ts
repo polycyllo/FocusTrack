@@ -26,8 +26,12 @@ CREATE TABLE IF NOT EXISTS task (
   status INTEGER NOT NULL DEFAULT 0,
   due_at TEXT,
   priority TEXT DEFAULT 'medium',
-  subject_id INTEGER,
-  task_type_id INTEGER
+  color TEXT,
+  icon TEXT,
+  created_at TEXT DEFAULT (datetime('now')),
+  subject_id INTEGER NOT NULL,
+  task_type_id INTEGER,
+  FOREIGN KEY(subject_id) REFERENCES subject(subject_id) ON DELETE CASCADE
 );
 
 CREATE TABLE IF NOT EXISTS schedule (
@@ -51,6 +55,27 @@ CREATE TABLE IF NOT EXISTS pomodoro (
 
 CREATE TABLE IF NOT EXISTS reminder (
   reminder_id INTEGER PRIMARY KEY AUTOINCREMENT,
+
+  -- Alarm fields (stored as TEXT/JSON when needed)
+  id TEXT,
+  title TEXT,
+  type TEXT,
+  linked_id TEXT,
+
+  repeat_type TEXT,
+  date TEXT,
+  time TEXT,
+  times TEXT,
+  repeat_days TEXT,
+  custom_by_day TEXT,
+
+  tone TEXT,
+  vibration INTEGER NOT NULL DEFAULT 1,
+  active INTEGER NOT NULL DEFAULT 1,
+
+  created_at TEXT,
+
+  -- legacy fields
   due_at TEXT NOT NULL,
   status INTEGER NOT NULL DEFAULT 0,
   task_id INTEGER
@@ -68,4 +93,16 @@ CREATE INDEX IF NOT EXISTS idx_reminder_due ON reminder (status, due_at);
 `
 
   sqlite.execSync(sql)
+
+  const ensureTaskColumn = (name: string, definition: string) => {
+    try {
+      sqlite.execSync(`ALTER TABLE task ADD COLUMN ${definition}`)
+    } catch (error) {
+      // column already exists
+    }
+  }
+
+  ensureTaskColumn('color', 'color TEXT')
+  ensureTaskColumn('icon', 'icon TEXT')
+  ensureTaskColumn('created_at', "created_at TEXT DEFAULT (datetime('now'))")
 }
