@@ -1,13 +1,15 @@
-import React, { useEffect, useCallback, useState } from "react";
-import { Alert, Pressable, Text } from "react-native";
+import React, { useState, useEffect, useCallback } from "react";
+import {
+  View,
+  Text,
+  Pressable,
+  StyleSheet,
+  SafeAreaView,
+  FlatList,
+  Alert,
+} from "react-native";
 import { useRouter, Href, useFocusEffect } from "expo-router";
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
-import { ListLayout } from "@/components/layouts/ListLayout";
-import {
-  SubjectCardLayout,
-  SUBJECT_CARD_COLORS,
-  subjectCardStyles,
-} from "@/components/cards/SubjectCardLayout";
 import { usePomodoroStore } from "@/src/store/pomodoro.store";
 import {
   deleteSubjectWithSchedules,
@@ -42,16 +44,6 @@ type ScheduleFromDB = {
   status?: number | null;
   subjectId?: number;
   subject_id?: number;
-};
-
-const COLORS = {
-  background: "#9ECDF2",
-  header: "#4A90E2",
-  button: "#70B1EA",
-  card: "#4A90E2",
-  cardText: "#ffffff",
-  chipBg: "rgba(255,255,255,0.18)",
-  chipBorder: "rgba(255,255,255,0.28)",
 };
 
 export default function SubjectsScreen() {
@@ -118,10 +110,10 @@ export default function SubjectsScreen() {
   );
 }
 
-function SubjectCard({
-  item,
-  onDeleted,
-}: {
+function SubjectCard({ 
+  item, 
+  onDeleted 
+}: { 
   item: { subject: SubjectFromDB; schedules: ScheduleFromDB[] };
   onDeleted: () => void;
 }) {
@@ -177,13 +169,10 @@ function SubjectCard({
               Alert.alert("Éxito", "Materia eliminada");
               onDeleted();
             }
-          } catch (error) {
-            console.error("Error eliminando materia:", error);
-            Alert.alert("Error", "No se pudo eliminar la materia");
-          }
+          },
         },
-      },
-    ]);
+      ]
+    );
   };
 
   const cancelDelete = () => setDeleting(false);
@@ -203,87 +192,196 @@ function SubjectCard({
         }`
       : undefined;
 
-  const actions = deleting ? (
-    <>
-      <Pressable
-        hitSlop={10}
-        style={[
-          subjectCardStyles.actionBtn,
-          { backgroundColor: "#e74c3c", borderColor: "#e74c3c" },
-        ]}
-        onPress={confirmDelete}
-      >
-        <MaterialCommunityIcons
-          name="trash-can-outline"
-          size={18}
-          color="#fff"
-        />
-      </Pressable>
+          <View style={{ flex: 1 }}>
+            <Text
+              numberOfLines={2}
+              ellipsizeMode="tail"
+              style={styles.cardTitle}
+            >
+              {item.subject.title || "Sin nombre"}
+            </Text>
+            {item.schedules && item.schedules.length > 0 && (
+              <Text style={styles.scheduleText}>
+                {item.schedules.length} horario{item.schedules.length !== 1 ? "s" : ""}
+              </Text>
+            )}
+          </View>
+        </View>
 
-      <Pressable
-        hitSlop={10}
-        style={[
-          subjectCardStyles.actionBtn,
-          { backgroundColor: "#95a5a6", borderColor: "#95a5a6" },
-        ]}
-        onPress={cancelDelete}
-      >
-        <MaterialCommunityIcons
-          name="close-circle-outline"
-          size={18}
-          color="#fff"
-        />
-      </Pressable>
-    </>
-  ) : (
-    <>
-      <Pressable
-        hitSlop={10}
-        style={subjectCardStyles.actionBtn}
-        onPress={openPomodoroConfig}
-      >
-        <MaterialCommunityIcons
-          name="timer-plus-outline"
-          size={18}
-          color="#fff"
-        />
-      </Pressable>
+        <View style={styles.actions}>
+          {deleting ? (
+            <>
+              <Pressable
+                hitSlop={10}
+                style={[
+                  styles.actionBtn,
+                  { backgroundColor: "#e74c3c", borderColor: "#e74c3c" },
+                ]}
+                onPress={confirmDelete}
+              >
+                <MaterialCommunityIcons
+                  name="trash-can-outline"
+                  size={18}
+                  color="#fff"
+                />
+              </Pressable>
 
-      <Pressable
-        hitSlop={10}
-        style={subjectCardStyles.actionBtn}
-        onPress={() => {
-          const sid = String(
-            item.subject.subjectId ?? item.subject.subject_id ?? ""
-          );
-          const title = item.subject.title || "";
-          router.push({
-            pathname: "/(tabs)/tasks",
-            params: { subjectId: sid, subjectTitle: title },
-          });
-        }}
-      >
-        <MaterialCommunityIcons
-          name="clipboard-check-multiple-outline"
-          size={18}
-          color="#fff"
-        />
-      </Pressable>
-    </>
-  );
+              <Pressable
+                hitSlop={10}
+                style={[
+                  styles.actionBtn,
+                  { backgroundColor: "#95a5a6", borderColor: "#95a5a6" },
+                ]}
+                onPress={cancelDelete}
+              >
+                <MaterialCommunityIcons
+                  name="close-circle-outline"
+                  size={18}
+                  color="#fff"
+                />
+              </Pressable>
+            </>
+          ) : (
+            <>
+              <Pressable
+                hitSlop={10}
+                style={styles.actionBtn}
+                onPress={openPomodoroConfig}
+              >
+                <MaterialCommunityIcons
+                  name="timer-plus-outline"
+                  size={18}
+                  color="#fff"
+                />
+              </Pressable>
 
-  return (
-    <GestureDetector gesture={longPressGesture}>
-      <SubjectCardLayout
-        Component={Animated.View}
-        containerProps={{ style: subjectCardStyles.card }}
-        overlay={<Animated.View style={fillStyle} />}
-        circleColor={item.subject.color || SUBJECT_CARD_COLORS.iconFallback}
-        icon={<Ionicons name="book" size={18} color="#fff" />}
-        title={item.subject.title || "Sin nombre"}
-        subtitle={subtitle}
-        actions={actions}
-      />
+              <Pressable
+                hitSlop={10}
+                style={styles.actionBtn}
+                onPress={() => {}}
+              >
+                <MaterialCommunityIcons
+                  name="clipboard-check-multiple-outline"
+                  size={18}
+                  color="#fff"
+                />
+              </Pressable>
+            </>
+          )}
+        </View>
+      </Animated.View>
     </GestureDetector>
   );
 }
+
+const COLORS = {
+  background: "#9ECDF2",
+  header: "#4A90E2",
+  button: "#70B1EA",
+  card: "#4A90E2",
+  cardText: "#ffffff",
+  chipBg: "rgba(255,255,255,0.18)",
+  chipBorder: "rgba(255,255,255,0.28)",
+};
+
+const styles = StyleSheet.create({
+  safe: { flex: 1, backgroundColor: COLORS.background },
+  container: { flex: 1, backgroundColor: COLORS.background },
+  header: {
+    backgroundColor: COLORS.header,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+  headerLeft: {
+    flex: 1,
+  },
+  headerTitle: { color: "#fff", fontSize: 18, fontWeight: "600" },
+  userGreeting: { 
+    color: "rgba(255,255,255,0.8)", 
+    fontSize: 12, 
+    marginTop: 2 
+  },
+  headerButtons: { flexDirection: "row", gap: 8, alignItems: "center" },
+  createBtn: {
+    backgroundColor: COLORS.button,
+    borderColor: COLORS.button,
+    borderWidth: 1,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 10,
+  },
+  createBtnText: { color: "#fff", fontWeight: "600", fontSize: 12 },
+  authBtn: {
+    backgroundColor: "rgba(255,255,255,0.2)",
+    padding: 8,
+    borderRadius: 8,
+  },
+  emptyBody: { 
+    flex: 1, 
+    alignItems: "center", 
+    justifyContent: "center",
+    paddingHorizontal: 40,
+  },
+  emptyText: { 
+    color: "#0A0A0A", 
+    fontSize: 16, 
+    fontWeight: "700",
+    marginTop: 16,
+  },
+  emptySubtext: {
+    color: "rgba(0,0,0,0.6)",
+    fontSize: 14,
+    marginTop: 8,
+    textAlign: "center",
+  },
+  card: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    backgroundColor: COLORS.card,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    borderRadius: 14,
+    shadowColor: "#000",
+    shadowOpacity: 0.08,
+    shadowOffset: { width: 0, height: 2 },
+    shadowRadius: 6,
+    elevation: 2,
+    marginBottom: 10,
+    overflow: "hidden",
+  },
+  iconCircle: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 1,
+    borderColor: COLORS.chipBorder,
+  },
+  cardTitle: {
+    color: COLORS.cardText,
+    fontWeight: "700",
+    fontSize: 15,
+    lineHeight: 20,
+  },
+  scheduleText: {
+    color: "rgba(255,255,255,0.7)",
+    fontSize: 12,
+    marginTop: 2,
+  },
+  actions: { flexDirection: "row", gap: 8, marginLeft: 8 },
+  actionBtn: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: COLORS.chipBg,
+    borderWidth: 1,
+    borderColor: COLORS.chipBorder,
+  },
+});
