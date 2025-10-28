@@ -65,6 +65,8 @@ const COLORS = {
   chipBorder: "rgba(255,255,255,0.28)",
 };
 
+const AnimatedCardContainer = Animated.View as unknown as ComponentType<ViewProps>;
+
 export default function SubjectsScreen() {
   const router = useRouter();
   const [subjects, setSubjects] = useState<
@@ -226,6 +228,9 @@ function SubjectCard({
 
   const [deleting, setDeleting] = React.useState(false);
 
+  const subjectIdValue = item.subject.subjectId ?? item.subject.subject_id;
+  const subjectTitleValue = item.subject.title || "";
+
   const fillProgress = useSharedValue(0);
   const fillOpacity = useSharedValue(0);
 
@@ -285,11 +290,21 @@ function SubjectCard({
   const cancelDelete = () => setDeleting(false);
 
   const openPomodoroConfig = () => {
-    const subjectId = item.subject.subjectId || item.subject.subject_id;
-    if (subjectId) {
-      setSubject(subjectId.toString());
+    if (subjectIdValue) {
+      setSubject(subjectIdValue.toString());
       router.push("/(tabs)/Pomodoro/PomodoroConfigForm" as Href);
     }
+  };
+
+  const openSubjectTasks = () => {
+    if (!subjectIdValue || deleting) return;
+    router.push({
+      pathname: "/(tabs)/tasks",
+      params: {
+        subjectId: String(subjectIdValue),
+        subjectTitle: subjectTitleValue,
+      },
+    });
   };
 
   const subtitle =
@@ -348,16 +363,7 @@ function SubjectCard({
       <Pressable
         hitSlop={10}
         style={subjectCardStyles.actionBtn}
-        onPress={() => {
-          const sid = String(
-            item.subject.subjectId ?? item.subject.subject_id ?? ""
-          );
-          const title = item.subject.title || "";
-          router.push({
-            pathname: "/(tabs)/tasks",
-            params: { subjectId: sid, subjectTitle: title },
-          });
-        }}
+        onPress={openSubjectTasks}
       >
         <MaterialCommunityIcons
           name="clipboard-check-multiple-outline"
@@ -371,7 +377,7 @@ function SubjectCard({
   return (
     <GestureDetector gesture={longPressGesture}>
       <SubjectCardLayout
-        Component={View}
+        Component={Animated.View as any}
         containerProps={{ style: subjectCardStyles.card }}
         overlay={<Animated.View style={fillStyle} />}
         circleColor={item.subject.color || SUBJECT_CARD_COLORS.iconFallback}

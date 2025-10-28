@@ -43,6 +43,11 @@ export async function getTasksBySubject(subjectId: number) {
 
 
 export async function updateTaskStatus(taskId: number, status: 0 | 1) {
-  await db.update(task).set({ status } as any).where(eq(task.taskId, taskId));
+  const completedAt = status === 1 ? new Date().toISOString() : null;
+
+  await db
+    .update(task)
+    .set({ status, completedAt } as any)
+    .where(eq(task.taskId, taskId));
 }
 
