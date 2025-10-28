@@ -1,7 +1,8 @@
-import React, { ComponentType, useEffect, useCallback, useState } from "react";
-import { Alert, Pressable, Text, ViewProps } from "react-native";
+import React, { useEffect, useCallback, useState } from "react";
+import { Alert, Pressable, Text, SafeAreaView, View, StyleSheet, FlatList } from "react-native";
 import { useRouter, Href, useFocusEffect } from "expo-router";
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
+import Svg, { Path } from "react-native-svg";
 import { ListLayout } from "@/components/layouts/ListLayout";
 import {
   SubjectCardLayout,
@@ -9,6 +10,8 @@ import {
   subjectCardStyles,
 } from "@/components/cards/SubjectCardLayout";
 import { usePomodoroStore } from "@/src/store/pomodoro.store";
+import { useAuthStore } from "@/src/store/auth.store";
+import UserProfileModal from "@/components/UserProfileModal";
 import {
   deleteSubjectWithSchedules,
   getAllSubjectsWithSchedules,
@@ -44,6 +47,14 @@ type ScheduleFromDB = {
   subject_id?: number;
 };
 
+function UserIcon({ size = 24, color = "#fff" }: { size?: number; color?: string }) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 512 512" fill={color}>
+      <Path d="M406.5 399.6C387.4 352.9 341.5 320 288 320l-64 0c-53.5 0-99.4 32.9-118.5 79.6-35.6-37.3-57.5-87.9-57.5-143.6 0-114.9 93.1-208 208-208s208 93.1 208 208c0 55.7-21.9 106.2-57.5 143.6zm-40.1 32.7C334.4 452.4 296.6 464 256 464s-78.4-11.6-110.5-31.7c7.3-36.7 39.7-64.3 78.5-64.3l64 0c38.8 0 71.2 27.6 78.5 64.3zM256 512a256 256 0 1 0 0-512 256 256 0 1 0 0 512zm0-272a40 40 0 1 1 0-80 40 40 0 1 1 0 80zm-88-40a88 88 0 1 0 176 0 88 88 0 1 0 -176 0z" />
+    </Svg>
+  );
+}
+
 const COLORS = {
   background: "#9ECDF2",
   header: "#4A90E2",
@@ -62,6 +73,10 @@ export default function SubjectsScreen() {
     Array<{ subject: SubjectFromDB; schedules: ScheduleFromDB[] }>
   >([]);
   const [loading, setLoading] = useState(true);
+  const [profileModalVisible, setProfileModalVisible] = useState(false);
+
+  // Auth store
+  const { isAuthenticated, user, logout } = useAuthStore();
 
   // 👇 Función para cargar materias desde la DB
   const loadSubjects = async () => {
@@ -90,33 +105,114 @@ export default function SubjectsScreen() {
 
   const goCreate = () => router.push("/(tabs)/subjects/create" as Href);
 
+  const handleUserIconPress = () => {
+    if (isAuthenticated) {
+      setProfileModalVisible(true);
+    } else {
+      router.push("/auth/login" as Href);
+    }
+  };
+
+  const handleLogout = () => {
+    Alert.alert(
+      "Cerrar sesión",
+      `¿Deseas cerrar sesión como ${user?.name}?`,
+      [
+        { text: "Cancelar", style: "cancel" },
+        {
+          text: "Cerrar sesión",
+          style: "destructive",
+          onPress: () => {
+            logout();
+            Alert.alert("Sesión cerrada", "Has cerrado sesión exitosamente");
+          },
+        },
+      ]
+    );
+  };
+
+  const handleStatistics = () => {
+    // Navegar a pantalla de estadísticas
+    Alert.alert("Implementar Estadísticas", "Aquí implementariamos las estadísticas del usuario");
+  };
+
+  const handleAlarms = () => {
+    // Navegar a la pantalla de alarmas
+    Alert.alert("Aquí Alarmas", "Aquí ya ves como redireccionar a las alarmas");
+  };
+
   return (
-    <ListLayout
-      title="Materias"
-      actionLabel="+ Crear materia"
-      onActionPress={goCreate}
-      data={subjects}
-      loading={loading}
-      renderItem={({ item }) => (
-        <SubjectCard item={item} onDeleted={loadSubjects} />
-      )}
-      keyExtractor={(item) =>
-        (item.subject.subjectId || item.subject.subject_id)?.toString() || ""
-      }
-      emptyMessage="No hay materias creadas"
-      loadingMessage="Cargando..."
-      colors={{
-        background: COLORS.background,
-        header: COLORS.header,
-        action: COLORS.button,
-        headerText: "#fff",
-        actionText: "#fff",
-        emptyText: "#0A0A0A",
-      }}
-      listProps={{
-        contentContainerStyle: { padding: 12, paddingBottom: 20 },
-      }}
-    />
+    <SafeAreaView style={styles.safe}>
+      <View style={styles.container}>
+        {/* Header */}
+        <View style={styles.header}>
+          <View style={styles.headerLeft}>
+            <Text style={styles.headerTitle}>Materias</Text>
+            {isAuthenticated && user && (
+              <Text style={styles.userGreeting}>Hola, {user.name}</Text>
+            )}
+          </View>
+
+          <View style={styles.headerButtons}>
+            <Pressable
+              onPress={goCreate}
+              style={({ pressed }) => [
+                styles.createBtn,
+                pressed && { opacity: 0.85 },
+              ]}
+            >
+              <Text style={styles.createBtnText}>+ Crear</Text>
+            </Pressable>
+
+            {/* Botón de usuario con icono SVG */}
+            <Pressable
+              onPress={handleUserIconPress}
+              style={({ pressed }) => [
+                styles.userBtn,
+                pressed && { opacity: 0.85 },
+              ]}
+            >
+              <UserIcon size={20} color="#fff" />
+            </Pressable>
+          </View>
+        </View>
+
+        {/* Body */}
+        {loading ? (
+          <View style={styles.emptyBody}>
+            <Text style={styles.emptyText}>Cargando...</Text>
+          </View>
+        ) : subjects.length === 0 ? (
+          <View style={styles.emptyBody}>
+            <Ionicons name="book-outline" size={64} color="rgba(0,0,0,0.3)" />
+            <Text style={styles.emptyText}>No hay materias creadas</Text>
+            <Text style={styles.emptySubtext}>
+              Toca "+ Crear" para agregar tu primera materia
+            </Text>
+          </View>
+        ) : (
+          <FlatList
+            contentContainerStyle={{ padding: 12, paddingBottom: 20 }}
+            data={subjects}
+            keyExtractor={(item) => 
+              (item.subject.subjectId || item.subject.subject_id)?.toString() || ""
+            }
+            renderItem={({ item }) => (
+              <SubjectCard item={item} onDeleted={loadSubjects} />
+            )}
+          />
+        )}
+      </View>
+
+      {/* Modal de perfil de usuario */}
+      <UserProfileModal
+        visible={profileModalVisible}
+        onClose={() => setProfileModalVisible(false)}
+        onLogout={handleLogout}
+        onStatistics={handleStatistics}
+        onAlarms={handleAlarms}
+      />
+    </SafeAreaView>
   );
 }
 
@@ -293,3 +389,58 @@ function SubjectCard({
     </GestureDetector>
   );
 }
+
+const styles = StyleSheet.create({
+  safe: { flex: 1, backgroundColor: COLORS.background },
+  container: { flex: 1, backgroundColor: COLORS.background },
+  header: {
+    backgroundColor: COLORS.header,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+  headerLeft: {
+    flex: 1,
+  },
+  headerTitle: { color: "#fff", fontSize: 18, fontWeight: "600" },
+  userGreeting: { 
+    color: "rgba(255,255,255,0.8)", 
+    fontSize: 12, 
+    marginTop: 2 
+  },
+  headerButtons: { flexDirection: "row", gap: 8, alignItems: "center" },
+  createBtn: {
+    backgroundColor: COLORS.button,
+    borderColor: COLORS.button,
+    borderWidth: 1,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 10,
+  },
+  createBtnText: { color: "#fff", fontWeight: "600", fontSize: 12 },
+  userBtn: {
+    backgroundColor: "rgba(255,255,255,0.2)",
+    padding: 8,
+    borderRadius: 8,
+  },
+  emptyBody: { 
+    flex: 1, 
+    alignItems: "center", 
+    justifyContent: "center",
+    paddingHorizontal: 40,
+  },
+  emptyText: { 
+    color: "#0A0A0A", 
+    fontSize: 16, 
+    fontWeight: "700",
+    marginTop: 16,
+  },
+  emptySubtext: {
+    color: "rgba(0,0,0,0.6)",
+    fontSize: 14,
+    marginTop: 8,
+    textAlign: "center",
+  },
+});
