@@ -275,7 +275,7 @@ function SubjectCard({
   return (
     <GestureDetector gesture={longPressGesture}>
       <SubjectCardLayout
-        Component={Animated.View}
+        Component={Animated.View as any}
         containerProps={{ style: subjectCardStyles.card }}
         overlay={<Animated.View style={fillStyle} />}
         circleColor={item.subject.color || SUBJECT_CARD_COLORS.iconFallback}
