@@ -13,15 +13,9 @@ import { useRouter } from "expo-router";
 import DateTimePicker, {
   DateTimePickerEvent,
 } from "@react-native-community/datetimepicker";
-import { Ionicons } from "@expo/vector-icons";
+import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 
-import { ColorIconPicker } from "@/components/forms/ColorIconPicker";
 import { addSubjectWithSchedules } from "@/src/features/subjects/repo";
-import {
-  FORM_THEME,
-  FORM_COLOR_SWATCHES,
-  FORM_ICON_OPTIONS,
-} from "@/src/constants/formStyles";
 
 type DayIndex = 0 | 1 | 2 | 3 | 4 | 5 | 6;
 
@@ -45,9 +39,28 @@ const NICE_DAY: Record<DayIndex, string> = {
   6: "Domingo",
 };
 
-const COLORS = FORM_THEME;
-const COLOR_SWATCHES = FORM_COLOR_SWATCHES;
-const ICON_OPTIONS = FORM_ICON_OPTIONS;
+const COLORS = {
+  background: "#9ECDF2",
+  header: "#4A90E2",
+  card: "#E5F2FD",
+  text: "#0A0A0A",
+  chipOn: "#2D6CDF",
+  chipOff: "rgba(0,0,0,0.08)",
+  border: "rgba(0,0,0,0.12)",
+  red: "#E74C3C",
+  green: "#27AE60",
+};
+
+const COLOR_SWATCHES = ["#3567e7", "#e74c3c", "#f39c12", "#27ae60", "#8e44ad"];
+const ICON_OPTIONS = [
+  { key: "book", node: <Ionicons name="book" size={22} /> },
+  { key: "calculator", node: <Ionicons name="calculator" size={22} /> },
+  { key: "flask", node: <Ionicons name="flask" size={22} /> },
+  {
+    key: "code-tags",
+    node: <MaterialCommunityIcons name="code-tags" size={22} />,
+  },
+];
 
 type TimeKind = "start" | "end";
 type PickerState =
@@ -259,12 +272,48 @@ export default function SubjectCreateScreen() {
           </View>
         )}
 
-        <ColorIconPicker
-          color={color}
-          onColorChange={setColor}
-          icon={icon}
-          onIconChange={setIcon}
-        />
+        {/* Color / ícono */}
+        <View style={styles.section}>
+          <Text style={styles.label}>Color / ícono</Text>
+
+          <View style={[styles.rowBetween, { flexWrap: "wrap", gap: 10 }]}>
+            {/* Colores */}
+            <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 10 }}>
+              {COLOR_SWATCHES.map((c) => {
+                const selected = color === c;
+                return (
+                  <Pressable
+                    key={c}
+                    onPress={() => setColor(c)}
+                    style={[
+                      styles.swatch,
+                      {
+                        backgroundColor: c,
+                        borderColor: selected ? "#000" : "transparent",
+                      },
+                    ]}
+                  />
+                );
+              })}
+            </View>
+
+            {/* Iconos */}
+            <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 10 }}>
+              {ICON_OPTIONS.map((opt) => {
+                const selected = icon === opt.key;
+                return (
+                  <Pressable
+                    key={opt.key}
+                    onPress={() => setIcon(opt.key)}
+                    style={[styles.iconPick, selected && styles.iconPickOn]}
+                  >
+                    <Text>{opt.node}</Text>
+                  </Pressable>
+                );
+              })}
+            </View>
+          </View>
+        </View>
 
         {/* Botones */}
         <View style={styles.footerBtns}>
@@ -384,6 +433,32 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   timeBtnText: { color: "#333", fontWeight: "600" },
+
+  rowBetween: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+
+  swatch: {
+    width: 28,
+    height: 28,
+    borderRadius: 16,
+    borderWidth: 2,
+  },
+  iconPick: {
+    width: 36,
+    height: 36,
+    borderRadius: 12,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#fff",
+    borderWidth: 1,
+    borderColor: COLORS.border,
+  },
+  iconPickOn: {
+    borderColor: "#000",
+  },
 
   footerBtns: { flexDirection: "row", gap: 12, marginBottom: 20 },
   btn: {

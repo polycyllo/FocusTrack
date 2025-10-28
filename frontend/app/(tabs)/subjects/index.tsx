@@ -11,9 +11,9 @@ import {
 import { useRouter, Href, useFocusEffect } from "expo-router";
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import { usePomodoroStore } from "@/src/store/pomodoro.store";
-import {
-  deleteSubjectWithSchedules,
-  getAllSubjectsWithSchedules,
+import { 
+  deleteSubjectWithSchedules, 
+  getAllSubjectsWithSchedules 
 } from "@/src/features/subjects/repo";
 import Animated, {
   useSharedValue,
@@ -81,32 +81,46 @@ export default function SubjectsScreen() {
   const goCreate = () => router.push("/(tabs)/subjects/create" as Href);
 
   return (
-    <ListLayout
-      title="Materias"
-      actionLabel="+ Crear materia"
-      onActionPress={goCreate}
-      data={subjects}
-      loading={loading}
-      renderItem={({ item }) => (
-        <SubjectCard item={item} onDeleted={loadSubjects} />
-      )}
-      keyExtractor={(item) =>
-        (item.subject.subjectId || item.subject.subject_id)?.toString() || ""
-      }
-      emptyMessage="No hay materias creadas"
-      loadingMessage="Cargando..."
-      colors={{
-        background: COLORS.background,
-        header: COLORS.header,
-        action: COLORS.button,
-        headerText: "#fff",
-        actionText: "#fff",
-        emptyText: "#0A0A0A",
-      }}
-      listProps={{
-        contentContainerStyle: { padding: 12, paddingBottom: 20 },
-      }}
-    />
+    <SafeAreaView style={styles.safe}>
+      <View style={styles.container}>
+        {/* Header */}
+        <View style={styles.header}>
+          <Text style={styles.headerTitle}>Materias</Text>
+
+          <Pressable
+            onPress={goCreate}
+            style={({ pressed }) => [
+              styles.createBtn,
+              pressed && { opacity: 0.85 },
+            ]}
+          >
+            <Text style={styles.createBtnText}>+ Crear materia</Text>
+          </Pressable>
+        </View>
+
+        {/* Body */}
+        {loading ? (
+          <View style={styles.emptyBody}>
+            <Text style={styles.emptyText}>Cargando...</Text>
+          </View>
+        ) : subjects.length === 0 ? (
+          <View style={styles.emptyBody}>
+            <Text style={styles.emptyText}>No hay materias creadas</Text>
+          </View>
+        ) : (
+          <FlatList
+            contentContainerStyle={{ padding: 12, paddingBottom: 20 }}
+            data={subjects}
+            keyExtractor={(item) => 
+              (item.subject.subjectId || item.subject.subject_id)?.toString() || ""
+            }
+            renderItem={({ item }) => (
+              <SubjectCard item={item} onDeleted={loadSubjects} />
+            )}
+          />
+        )}
+      </View>
+    </SafeAreaView>
   );
 }
 
@@ -122,6 +136,7 @@ function SubjectCard({
 
   const [deleting, setDeleting] = React.useState(false);
 
+  // Animación de llenado al mantener presionado
   const fillProgress = useSharedValue(0);
   const fillOpacity = useSharedValue(0);
 
@@ -137,6 +152,7 @@ function SubjectCard({
     opacity: fillOpacity.value,
   }));
 
+  // 👇 Gestura: mantener presionado para activar borrado
   const longPressGesture = Gesture.LongPress()
     .minDuration(1000)
     .onStart(() => {
@@ -156,18 +172,25 @@ function SubjectCard({
 
   const confirmDelete = async () => {
     const subjectId = item.subject.subjectId || item.subject.subject_id;
-
-    Alert.alert("Confirmar eliminación", `¿Eliminar la materia "${item.subject.title}"?`, [
-      { text: "Cancelar", style: "cancel", onPress: () => setDeleting(false) },
-      {
-        text: "Eliminar",
-        style: "destructive",
-        onPress: async () => {
-          try {
-            if (subjectId) {
-              await deleteSubjectWithSchedules(subjectId);
-              Alert.alert("Éxito", "Materia eliminada");
-              onDeleted();
+    
+    Alert.alert(
+      "Confirmar eliminación",
+      `¿Eliminar la materia "${item.subject.title}"?`,
+      [
+        { text: "Cancelar", style: "cancel", onPress: () => setDeleting(false) },
+        {
+          text: "Eliminar",
+          style: "destructive",
+          onPress: async () => {
+            try {
+              if (subjectId) {
+                await deleteSubjectWithSchedules(subjectId);
+                Alert.alert("Éxito", "Materia eliminada");
+                onDeleted(); // Recargar lista
+              }
+            } catch (error) {
+              console.error("Error eliminando materia:", error);
+              Alert.alert("Error", "No se pudo eliminar la materia");
             }
           },
         },
@@ -185,12 +208,37 @@ function SubjectCard({
     }
   };
 
+<<<<<<< HEAD
   const subtitle =
     item.schedules && item.schedules.length > 0
       ? `${item.schedules.length} horario${
           item.schedules.length !== 1 ? "s" : ""
         }`
       : undefined;
+=======
+  return (
+    <GestureDetector gesture={longPressGesture}>
+      <Animated.View style={styles.card}>
+        {/* Relleno animado */}
+        <Animated.View style={fillStyle} />
+
+        <View
+          style={{
+            flexDirection: "row",
+            alignItems: "center",
+            gap: 12,
+            flex: 1,
+          }}
+        >
+          <View
+            style={[
+              styles.iconCircle,
+              { backgroundColor: item.subject.color || "#70B1EA" },
+            ]}
+          >
+            <Ionicons name="book" size={18} color="#fff" />
+          </View>
+>>>>>>> parent of 28cba4d (Merge pull request #16 from polycyllo/alarm)
 
           <View style={{ flex: 1 }}>
             <Text
@@ -295,6 +343,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "space-between",
   },
+<<<<<<< HEAD
   headerLeft: {
     flex: 1,
   },
@@ -305,6 +354,9 @@ const styles = StyleSheet.create({
     marginTop: 2 
   },
   headerButtons: { flexDirection: "row", gap: 8, alignItems: "center" },
+=======
+  headerTitle: { color: "#fff", fontSize: 18, fontWeight: "600" },
+>>>>>>> parent of 28cba4d (Merge pull request #16 from polycyllo/alarm)
   createBtn: {
     backgroundColor: COLORS.button,
     borderColor: COLORS.button,
@@ -314,6 +366,7 @@ const styles = StyleSheet.create({
     borderRadius: 10,
   },
   createBtnText: { color: "#fff", fontWeight: "600", fontSize: 12 },
+<<<<<<< HEAD
   authBtn: {
     backgroundColor: "rgba(255,255,255,0.2)",
     padding: 8,
@@ -337,6 +390,10 @@ const styles = StyleSheet.create({
     marginTop: 8,
     textAlign: "center",
   },
+=======
+  emptyBody: { flex: 1, alignItems: "center", justifyContent: "center" },
+  emptyText: { color: "#0A0A0A", fontSize: 16, fontWeight: "700" },
+>>>>>>> parent of 28cba4d (Merge pull request #16 from polycyllo/alarm)
   card: {
     flexDirection: "row",
     alignItems: "center",
@@ -384,4 +441,8 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: COLORS.chipBorder,
   },
+<<<<<<< HEAD
 });
+=======
+});
+>>>>>>> parent of 28cba4d (Merge pull request #16 from polycyllo/alarm)

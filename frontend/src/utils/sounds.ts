@@ -1,4 +1,4 @@
-import { Audio, InterruptionModeAndroid, InterruptionModeIOS } from "expo-av";
+import { Audio } from "expo-av";
 
 let hasConfiguredAudio = false;
 
@@ -10,8 +10,8 @@ async function ensureAudioMode() {
       playsInSilentModeIOS: true,
       allowsRecordingIOS: false,
       staysActiveInBackground: false,
-      interruptionModeIOS: InterruptionModeIOS.DoNotMix,
-      interruptionModeAndroid: InterruptionModeAndroid.DoNotMix,
+      interruptionModeIOS: Audio.INTERRUPTION_MODE_IOS_DO_NOT_MIX,
+      interruptionModeAndroid: Audio.INTERRUPTION_MODE_ANDROID_DO_NOT_MIX,
       shouldDuckAndroid: true,
       playThroughEarpieceAndroid: false,
     });
@@ -31,10 +31,11 @@ export async function playBell() {
   );
 
   sound.setOnPlaybackStatusUpdate((status) => {
-    if (!status.isLoaded || (status as any).didJustFinish) {
+    if (!status.isLoaded || status.didJustFinish) {
       sound.unloadAsync().catch(() => {});
     }
   });
 
   await sound.playAsync();
 }
+
