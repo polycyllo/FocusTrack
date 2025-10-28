@@ -314,9 +314,18 @@ export const ConfirmDeleteModal: React.FC<{
   <Modal visible={visible} transparent animationType="fade">
     <View style={styles.modalWrap}>
       <View style={styles.modalBox}>
-        <Text style={{ color: COLORS.white, fontSize: 16, marginBottom: 12 }}>
+        <Text
+          style={{
+            color: COLORS.text,
+            fontSize: 17,
+            fontWeight: "700",
+            marginBottom: 16,
+            textAlign: "center",
+          }}
+        >
           ¿Deseas eliminar esta alarma?
         </Text>
+
         <View style={{ flexDirection: "row", gap: 12 }}>
           <Pressable
             onPress={onCancel}
@@ -448,15 +457,20 @@ const styles = StyleSheet.create({
 
   modalWrap: {
     flex: 1,
-    backgroundColor: "rgba(0,0,0,0.35)",
+    backgroundColor: "rgba(0,0,0,0.6)",
     alignItems: "center",
     justifyContent: "center",
   },
   modalBox: {
-    backgroundColor: COLORS.primary,
-    padding: 18,
-    borderRadius: 14,
-    width: "80%",
+    backgroundColor: "#fff",
+    padding: 22,
+    borderRadius: 18,
+    width: "85%",
+    shadowColor: "#000",
+    shadowOpacity: 0.25,
+    shadowRadius: 6,
+    elevation: 6,
+    alignItems: "center",
   },
   modalBtn: {
     flex: 1,
@@ -464,7 +478,10 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     alignItems: "center",
   },
-  modalBtnText: { color: COLORS.white, fontWeight: "700" },
+  modalBtnText: {
+    color: "#fff",
+    fontWeight: "700",
+  },
 
   toast: {
     position: "absolute",
