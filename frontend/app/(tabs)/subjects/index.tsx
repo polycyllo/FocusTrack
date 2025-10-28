@@ -119,6 +119,11 @@ export default function SubjectsScreen() {
     Alert.alert("Implementar Estadísticas", "Aquí implementariamos las estadísticas del usuario");
   };
 
+  const handleAlarms = () => {
+    // Navegar a la pantalla de alarmas kike
+    Alert.alert("Aquí Alarmas", "Aquí ya ves como redireccionar a las alarmas kike");
+  };
+
   return (
     <SafeAreaView style={styles.safe}>
       <View style={styles.container}>
@@ -188,6 +193,7 @@ export default function SubjectsScreen() {
         onClose={() => setProfileModalVisible(false)}
         onLogout={handleLogout}
         onStatistics={handleStatistics}
+        onAlarms={handleAlarms}
       />
     </SafeAreaView>
   );

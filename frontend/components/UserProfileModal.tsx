@@ -15,6 +15,7 @@ type UserProfileModalProps = {
   onClose: () => void;
   onLogout: () => void;
   onStatistics: () => void;
+  onAlarms: () => void;
 };
 
 export default function UserProfileModal({
@@ -22,6 +23,7 @@ export default function UserProfileModal({
   onClose,
   onLogout,
   onStatistics,
+  onAlarms, 
 }: UserProfileModalProps) {
   const { user } = useAuthStore();
 
@@ -43,7 +45,7 @@ export default function UserProfileModal({
         activeOpacity={1}
         onPress={onClose}
       >
-        {/* Modal content - prevenir que se cierre al tocar dentro */}
+        {/* Modal content */}
         <TouchableOpacity
           activeOpacity={1}
           style={styles.modalContainer}
@@ -74,6 +76,22 @@ export default function UserProfileModal({
             >
               <Ionicons name="stats-chart" size={20} color="#fff" />
               <Text style={styles.buttonText}>Estadísticas</Text>
+            </Pressable>
+
+            {/* Botón Mis Alarmas */}
+            <Pressable
+              style={({ pressed }) => [
+                styles.button,
+                styles.alarmsButton,
+                pressed && { opacity: 0.85 },
+              ]}
+              onPress={() => {
+                onClose();
+                onAlarms();
+              }}
+            >
+              <Ionicons name="alarm-outline" size={20} color="#fff" />
+              <Text style={styles.buttonText}>Mis Alarmas</Text>
             </Pressable>
 
             {/* Botón Cerrar sesión */}
@@ -160,6 +178,9 @@ const styles = StyleSheet.create({
   },
   statsButton: {
     backgroundColor: '#4A90E2',
+  },
+  alarmsButton: {
+    backgroundColor: '#27AE60', 
   },
   logoutButton: {
     backgroundColor: '#E74C3C',
