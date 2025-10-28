@@ -55,6 +55,27 @@ CREATE TABLE IF NOT EXISTS pomodoro (
 
 CREATE TABLE IF NOT EXISTS reminder (
   reminder_id INTEGER PRIMARY KEY AUTOINCREMENT,
+
+  -- Alarm fields (stored as TEXT/JSON when needed)
+  id TEXT,
+  title TEXT,
+  type TEXT,
+  linked_id TEXT,
+
+  repeat_type TEXT,
+  date TEXT,
+  time TEXT,
+  times TEXT,
+  repeat_days TEXT,
+  custom_by_day TEXT,
+
+  tone TEXT,
+  vibration INTEGER NOT NULL DEFAULT 1,
+  active INTEGER NOT NULL DEFAULT 1,
+
+  created_at TEXT,
+
+  -- legacy fields
   due_at TEXT NOT NULL,
   status INTEGER NOT NULL DEFAULT 0,
   task_id INTEGER

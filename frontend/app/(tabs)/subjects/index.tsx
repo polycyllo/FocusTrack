@@ -280,18 +280,16 @@ function SubjectCard({
 
   return (
     <GestureDetector gesture={longPressGesture}>
-      <Pressable onPress={openSubjectTasks} disabled={deleting}>
-        <SubjectCardLayout
-          Component={AnimatedCardContainer}
-          containerProps={{ style: subjectCardStyles.card }}
-          overlay={<Animated.View pointerEvents="none" style={fillStyle} />}
-          circleColor={item.subject.color || SUBJECT_CARD_COLORS.iconFallback}
-          icon={<Ionicons name="book" size={18} color="#fff" />}
-          title={item.subject.title || "Sin nombre"}
-          subtitle={subtitle}
-          actions={actions}
-        />
-      </Pressable>
+      <SubjectCardLayout
+        Component={Animated.View as any}
+        containerProps={{ style: subjectCardStyles.card }}
+        overlay={<Animated.View style={fillStyle} />}
+        circleColor={item.subject.color || SUBJECT_CARD_COLORS.iconFallback}
+        icon={<Ionicons name="book" size={18} color="#fff" />}
+        title={item.subject.title || "Sin nombre"}
+        subtitle={subtitle}
+        actions={actions}
+      />
     </GestureDetector>
   );
 }
