@@ -32,7 +32,7 @@ const uuid = () =>
     return v.toString(16);
   });
 
-// Función para convertir datos de la BD al formato Alarm
+// Función para convertir de la BD al formato Alarm
 function dbRowToAlarm(row: any): Alarm {
   return {
     id: row.id,
