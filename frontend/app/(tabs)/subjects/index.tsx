@@ -258,7 +258,7 @@ function SubjectCard({
           );
           const title = item.subject.title || "";
           router.push({
-            pathname: "/(tabs)/tasks",
+            pathname: "/(tabs)/tasks" as any,
             params: { subjectId: sid, subjectTitle: title },
           });
         }}
@@ -275,7 +275,7 @@ function SubjectCard({
   return (
     <GestureDetector gesture={longPressGesture}>
       <SubjectCardLayout
-        Component={Animated.View}
+        Component={Animated.View as any}
         containerProps={{ style: subjectCardStyles.card }}
         overlay={<Animated.View style={fillStyle} />}
         circleColor={item.subject.color || SUBJECT_CARD_COLORS.iconFallback}
