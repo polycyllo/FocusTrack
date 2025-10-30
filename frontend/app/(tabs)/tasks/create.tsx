@@ -68,7 +68,7 @@ export default function TaskCreateScreen() {
       setIcon(FORM_ICON_OPTIONS[0].key);
 
       router.replace({
-        pathname: "/(tabs)/tasks",
+        pathname: "/(tabs)/tasks" as any,
         params: {
           subjectId: subjectIdParam,
           subjectTitle: subjectTitle ?? "",
@@ -128,7 +128,7 @@ export default function TaskCreateScreen() {
             style={[styles.btn, styles.btnCancel]}
             onPress={() =>
               router.replace({
-                pathname: "/(tabs)/tasks",
+                pathname: "/(tabs)/tasks" as any,
                 params: {
                   subjectId: subjectIdParam,
                   subjectTitle: subjectTitle ?? "",

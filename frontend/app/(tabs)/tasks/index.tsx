@@ -86,7 +86,7 @@ export default function TasksListScreen() {
     }
 
     router.push({
-      pathname: "/(tabs)/tasks/create",
+      pathname: "/(tabs)/tasks/create" as any,
       params: {
         subjectId: subjectIdParam,
         subjectTitle: subjectTitle ?? "",
