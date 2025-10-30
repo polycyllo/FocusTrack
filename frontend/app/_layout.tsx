@@ -12,14 +12,27 @@ import "react-native-reanimated";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { useColorScheme } from "@/components/useColorScheme";
 import { ensureSchema } from "../src/db/init";
+import { db } from "../src/db/db";
+import { student } from "../src/db/schemas/Student";
+import { eq } from "drizzle-orm";
+import * as Notifications from "expo-notifications";
 
 export { ErrorBoundary } from "expo-router";
 
 export const unstable_settings = {
-  initialRouteName: "index",
+  initialRouteName: "(tabs)",
 };
 
 SplashScreen.preventAutoHideAsync();
+
+Notifications.setNotificationHandler({
+  handleNotification: async () => ({
+    shouldPlaySound: true,
+    shouldSetBadge: false,
+    shouldShowBanner: true as any,
+    shouldShowList: true as any,
+  }),
+});
 
 export default function RootLayout() {
   const [loaded, error] = useFonts({
@@ -35,7 +48,53 @@ export default function RootLayout() {
     if (!loaded) return;
 
     (async () => {
+      const { status } = await Notifications.getPermissionsAsync();
+      if (status !== "granted") {
+        await Notifications.requestPermissionsAsync();
+      }
+
+      await Notifications.setNotificationChannelAsync("default", {
+        name: "Recordatorios",
+        importance: Notifications.AndroidImportance.HIGH,
+        sound: "default",
+        vibrationPattern: [250, 250, 250, 250],
+        lockscreenVisibility:
+          Notifications.AndroidNotificationVisibility.PUBLIC,
+        bypassDnd: false,
+      });
+
+      await Notifications.setNotificationChannelAsync("alarm-bell", {
+        name: "Alarmas (Campana)",
+        importance: Notifications.AndroidImportance.HIGH,
+        sound: "bell",
+        vibrationPattern: [250, 250, 250, 250],
+        lockscreenVisibility:
+          Notifications.AndroidNotificationVisibility.PUBLIC,
+        bypassDnd: false,
+      });
       ensureSchema();
+
+      const pepitoEmail = "pepito@gmail.com";
+      const existing = await db
+        .select()
+        .from(student)
+        .where(eq(student.email, pepitoEmail))
+        .limit(1);
+
+      if (existing.length === 0) {
+        await db.insert(student).values({
+          name: "Pepito",
+          email: pepitoEmail,
+          password: "123456",
+        });
+        console.log("✅ Pepito creado");
+      } else {
+        console.log("ℹ️ Pepito ya existía, no se vuelve a crear");
+      }
+
+      const result = await db.select().from(student);
+      console.log("📂 Students en DB:", result);
+
       await SplashScreen.hideAsync();
     })();
   }, [loaded]);
@@ -55,10 +114,6 @@ function RootLayoutNav() {
   return (
     <ThemeProvider value={colorScheme === "dark" ? DarkTheme : DefaultTheme}>
       <Stack>
-        <Stack.Screen name="index" options={{ headerShown: false }} />
-        <Stack.Screen name="landing" options={{ headerShown: false }} />
-        <Stack.Screen name="auth/login" options={{ headerShown: false }} />
-        <Stack.Screen name="auth/register" options={{ headerShown: false }} />
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
         <Stack.Screen name="modal" options={{ presentation: "modal" }} />
       </Stack>

@@ -1,7 +1,11 @@
 import { create } from 'zustand'
 import { persist, createJSONStorage } from 'zustand/middleware'
 import AsyncStorage from '@react-native-async-storage/async-storage'
-import { addSubjectWithSchedules, getAllSubjectsWithSchedules } from '../features/subjects/repo'
+import {
+  addSubjectWithSchedules,
+  getAllSubjectsWithSchedules,
+  printAllSubjectsWithSchedules,
+} from '../features/subjects/repo'
 
 export type DayIndex = 0 | 1 | 2 | 3 | 4 | 5 | 6
 
@@ -112,7 +116,7 @@ export const useSubjectsStore = create<SubjectsState>()(
         try {
           // eslint-disable-next-line no-console
           console.log('[subjects.store] printAllFromDb()')
-          await (await import('../features/subjects/repo')).printAllSubjectsWithSchedules()
+          await printAllSubjectsWithSchedules()
         } catch (e) {
           console.error('printAllFromDb failed', e)
         }
