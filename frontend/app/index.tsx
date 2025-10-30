@@ -25,7 +25,7 @@ export default function Index() {
   }
 
   // Siempre ir a landing primero (el usuario decide si quiere login o continuar sin cuenta)
-  return <Redirect href="/landing" />;
+  return <Redirect href={"/landing" as Href} />;
 }
 
 const styles = StyleSheet.create({
