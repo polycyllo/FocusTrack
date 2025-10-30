@@ -20,7 +20,7 @@ import * as Notifications from "expo-notifications";
 export { ErrorBoundary } from "expo-router";
 
 export const unstable_settings = {
-  initialRouteName: "(tabs)",
+  initialRouteName: "index",
 };
 
 SplashScreen.preventAutoHideAsync();
@@ -48,11 +48,13 @@ export default function RootLayout() {
     if (!loaded) return;
 
     (async () => {
+      // Solicitar permisos de notificaciones
       const { status } = await Notifications.getPermissionsAsync();
       if (status !== "granted") {
         await Notifications.requestPermissionsAsync();
       }
 
+      // Configurar canal de notificaciones default
       await Notifications.setNotificationChannelAsync("default", {
         name: "Recordatorios",
         importance: Notifications.AndroidImportance.HIGH,
@@ -63,6 +65,7 @@ export default function RootLayout() {
         bypassDnd: false,
       });
 
+      // Configurar canal de notificaciones para alarmas
       await Notifications.setNotificationChannelAsync("alarm-bell", {
         name: "Alarmas (Campana)",
         importance: Notifications.AndroidImportance.HIGH,
@@ -72,8 +75,11 @@ export default function RootLayout() {
           Notifications.AndroidNotificationVisibility.PUBLIC,
         bypassDnd: false,
       });
+
+      // Inicializar esquema de base de datos
       ensureSchema();
 
+      // Crear usuario de prueba "Pepito" si no existe
       const pepitoEmail = "pepito@gmail.com";
       const existing = await db
         .select()
@@ -92,6 +98,7 @@ export default function RootLayout() {
         console.log("ℹ️ Pepito ya existía, no se vuelve a crear");
       }
 
+      // Mostrar estudiantes en la consola
       const result = await db.select().from(student);
       console.log("📂 Students en DB:", result);
 
@@ -114,6 +121,10 @@ function RootLayoutNav() {
   return (
     <ThemeProvider value={colorScheme === "dark" ? DarkTheme : DefaultTheme}>
       <Stack>
+        <Stack.Screen name="index" options={{ headerShown: false }} />
+        <Stack.Screen name="landing" options={{ headerShown: false }} />
+        <Stack.Screen name="auth/login" options={{ headerShown: false }} />
+        <Stack.Screen name="auth/register" options={{ headerShown: false }} />
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
         <Stack.Screen name="modal" options={{ presentation: "modal" }} />
       </Stack>
