@@ -1,5 +1,13 @@
 import React, { useEffect, useCallback, useState } from "react";
-import { Alert, Pressable, Text, SafeAreaView, View, StyleSheet, FlatList } from "react-native";
+import {
+  Alert,
+  Pressable,
+  Text,
+  SafeAreaView,
+  View,
+  StyleSheet,
+  FlatList,
+} from "react-native";
 import { useRouter, Href, useFocusEffect } from "expo-router";
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import Svg, { Path } from "react-native-svg";
@@ -11,7 +19,10 @@ import {
 import { usePomodoroStore } from "@/src/store/pomodoro.store";
 import { useAuthStore } from "@/src/store/auth.store";
 import UserProfileModal from "@/components/UserProfileModal";
-import { deleteSubjectWithSchedules, getAllSubjectsWithSchedules } from "@/src/features/subjects/repo";
+import {
+  deleteSubjectWithSchedules,
+  getAllSubjectsWithSchedules,
+} from "@/src/features/subjects/repo";
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
@@ -42,7 +53,13 @@ type ScheduleFromDB = {
   subject_id?: number;
 };
 
-function UserIcon({ size = 24, color = "#fff" }: { size?: number; color?: string }) {
+function UserIcon({
+  size = 24,
+  color = "#fff",
+}: {
+  size?: number;
+  color?: string;
+}) {
   return (
     <Svg width={size} height={size} viewBox="0 0 512 512" fill={color}>
       <Path d="M406.5 399.6C387.4 352.9 341.5 320 288 320l-64 0c-53.5 0-99.4 32.9-118.5 79.6-35.6-37.3-57.5-87.9-57.5-143.6 0-114.9 93.1-208 208-208s208 93.1 208 208c0 55.7-21.9 106.2-57.5 143.6zm-40.1 32.7C334.4 452.4 296.6 464 256 464s-78.4-11.6-110.5-31.7c7.3-36.7 39.7-64.3 78.5-64.3l64 0c38.8 0 71.2 27.6 78.5 64.3zM256 512a256 256 0 1 0 0-512 256 256 0 1 0 0 512zm0-272a40 40 0 1 1 0-80 40 40 0 1 1 0 80zm-88-40a88 88 0 1 0 176 0 88 88 0 1 0 -176 0z" />
@@ -63,7 +80,9 @@ const COLORS = {
 export default function SubjectsScreen() {
   const router = useRouter();
   const { isAuthenticated, user, logout } = useAuthStore();
-  const [subjects, setSubjects] = useState<Array<{ subject: SubjectFromDB; schedules: ScheduleFromDB[] }>>([]);
+  const [subjects, setSubjects] = useState<
+    Array<{ subject: SubjectFromDB; schedules: ScheduleFromDB[] }>
+  >([]);
   const [loading, setLoading] = useState(true);
   const [profileModalVisible, setProfileModalVisible] = useState(false);
 
@@ -101,29 +120,28 @@ export default function SubjectsScreen() {
   };
 
   const handleLogout = () => {
-    Alert.alert(
-      "Cerrar sesión",
-      `¿Deseas cerrar sesión como ${user?.name}?`,
-      [
-        { text: "Cancelar", style: "cancel" },
-        {
-          text: "Cerrar sesión",
-          style: "destructive",
-          onPress: () => {
-            logout();
-            Alert.alert("Sesión cerrada", "Has cerrado sesión exitosamente");
-          },
+    Alert.alert("Cerrar sesión", `¿Deseas cerrar sesión como ${user?.name}?`, [
+      { text: "Cancelar", style: "cancel" },
+      {
+        text: "Cerrar sesión",
+        style: "destructive",
+        onPress: () => {
+          logout();
+          Alert.alert("Sesión cerrada", "Has cerrado sesión exitosamente");
         },
-      ]
-    );
+      },
+    ]);
   };
 
   const handleStatistics = () => {
-    Alert.alert("Implementar Estadísticas", "Aquí implementariamos las estadísticas del usuario");
+    Alert.alert(
+      "Implementar Estadísticas",
+      "Aquí implementariamos las estadísticas del usuario"
+    );
   };
 
   const handleAlarms = () => {
-    Alert.alert("Aquí Alarmas", "Aquí ya ves como redireccionar a las alarmas");
+    router.push("/alarms" as Href);
   };
 
   return (
@@ -177,7 +195,8 @@ export default function SubjectsScreen() {
             contentContainerStyle={{ padding: 12, paddingBottom: 20 }}
             data={subjects}
             keyExtractor={(item) =>
-              (item.subject.subjectId || item.subject.subject_id)?.toString() || ""
+              (item.subject.subjectId || item.subject.subject_id)?.toString() ||
+              ""
             }
             renderItem={({ item }) => (
               <SubjectCard item={item} onDeleted={loadSubjects} />
@@ -199,7 +218,7 @@ export default function SubjectsScreen() {
 
 function SubjectCard({
   item,
-  onDeleted
+  onDeleted,
 }: {
   item: { subject: SubjectFromDB; schedules: ScheduleFromDB[] };
   onDeleted: () => void;
@@ -251,7 +270,11 @@ function SubjectCard({
       "Confirmar eliminación",
       `¿Eliminar la materia "${item.subject.title}"?`,
       [
-        { text: "Cancelar", style: "cancel", onPress: () => setDeleting(false) },
+        {
+          text: "Cancelar",
+          style: "cancel",
+          onPress: () => setDeleting(false),
+        },
         {
           text: "Eliminar",
           style: "destructive",
@@ -294,7 +317,9 @@ function SubjectCard({
 
   const subtitle =
     item.schedules && item.schedules.length > 0
-      ? `${item.schedules.length} horario${item.schedules.length !== 1 ? "s" : ""}`
+      ? `${item.schedules.length} horario${
+          item.schedules.length !== 1 ? "s" : ""
+        }`
       : undefined;
 
   const actions = deleting ? (
@@ -391,7 +416,7 @@ const styles = StyleSheet.create({
   userGreeting: {
     color: "rgba(255,255,255,0.8)",
     fontSize: 12,
-    marginTop: 2
+    marginTop: 2,
   },
   headerButtons: { flexDirection: "row", gap: 8, alignItems: "center" },
   createBtn: {
