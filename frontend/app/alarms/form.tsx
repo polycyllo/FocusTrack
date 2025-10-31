@@ -628,3 +628,5 @@ const styles = StyleSheet.create({
   dayTitle: { fontWeight: "800", color: COLORS.primaryDark, fontSize: 14 },
   daySub: { color: COLORS.dark, opacity: 0.7, fontSize: 12 },
 });
+
+//this file must be refactored 
