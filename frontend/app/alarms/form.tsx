@@ -138,6 +138,57 @@ export default function AlarmForm() {
 
   const onSave = async () => {
     try {
+      if (!title.trim()) {
+      alert("El título no puede estar vacío.");
+      return;
+    }
+
+    if (title.trim().length < 3) {
+      alert("El título debe tener al menos 3 caracteres.");
+      return;
+    }
+
+    if (repeatType === "once") {
+      if (!date) {
+        alert("Selecciona una fecha para la alarma.");
+        return;
+      }
+      if (!time) {
+        alert("Selecciona una hora para la alarma.");
+        return;
+      }
+      if (date < new Date()) {
+        alert("No puedes programar una alarma en una fecha pasada.");
+        return;
+      }
+    }
+
+    if (repeatType === "daily" && !time) {
+      alert("Selecciona una hora para la alarma diaria.");
+      return;
+    }
+
+    if (repeatType === "custom") {
+      if (!repeatDays || repeatDays.length === 0) {
+        alert("Selecciona al menos un día para la alarma personalizada.");
+        return;
+      }
+      if (!perDay && (!times || times.length === 0)) {
+        alert("Selecciona al menos una hora para los días seleccionados.");
+        return;
+      }
+    }
+
+    if (!tone) {
+      alert("Selecciona un tono para la alarma.");
+      return;
+    }
+
+    if (alarmType === "task" && repeatType === "daily") {
+      alert("Las tareas no pueden repetirse diariamente.");
+      return;
+    }
+
       setSaving(true);
       const prevCustomByDay = (original as any)?.customByDay ?? null;
       const prevRepeatDays = (original as any)?.repeatDays ?? null;
