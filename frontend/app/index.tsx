@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
+import { Redirect } from 'expo-router';
 import { View, ActivityIndicator, StyleSheet } from 'react-native';
 import { useAuthStore } from '@/src/store/auth.store';
-import { Redirect, type Href } from "expo-router";
+
 export default function Index() {
   const { isAuthenticated, restoreSession } = useAuthStore();
   const [isReady, setIsReady] = useState(false);
@@ -25,7 +26,7 @@ export default function Index() {
   }
 
   // Siempre ir a landing primero (el usuario decide si quiere login o continuar sin cuenta)
-  return <Redirect href={"/landing" as Href} />;
+  return <Redirect href="/landing" />;
 }
 
 const styles = StyleSheet.create({

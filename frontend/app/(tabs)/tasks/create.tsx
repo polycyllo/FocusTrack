@@ -50,9 +50,11 @@ export default function TaskCreateScreen() {
       return;
     }
 
+    const trimmedDescription = description.trim().slice(0, 30);
+
     const payload = {
       title: name.trim(),
-      description: description.trim() ? description.trim() : null,
+      description: trimmedDescription ? trimmedDescription : null,
       color,
       icon,
       subjectId,
@@ -109,8 +111,8 @@ export default function TaskCreateScreen() {
           <TextInput
             placeholder="Descripcion de la tarea"
             placeholderTextColor="rgba(0,0,0,0.4)"
-            style={[styles.input, styles.inputMultiline]}
-            multiline
+            style={styles.input}
+            maxLength={30}
             value={description}
             onChangeText={setDescription}
           />

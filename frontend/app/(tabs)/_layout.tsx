@@ -56,8 +56,14 @@ export default function TabLayout() {
           }}
         />
         <Tabs.Screen
-          name="Pomodoro"
-          options={{ title: "Pomodoro", headerShown: false }}
+          name="Pomodoro/index"
+          options={{ 
+            title: "Pomodoro", 
+            headerShown: false,
+            tabBarIcon: ({ color, size }) => (
+              <MaterialCommunityIcons name="timer" size={size} color={color} />
+            ),
+          }}
         />
         <Tabs.Screen
           name="alarms"
@@ -65,6 +71,24 @@ export default function TabLayout() {
             title: "Alarmas",
             tabBarIcon: ({ color, size }) => (
               <MaterialCommunityIcons name="bell" size={size} color={color} />
+            ),
+          }}
+        />
+        <Tabs.Screen
+          name="subjects/index"
+          options={{
+            title: "Materias",
+            tabBarIcon: ({ color, size }) => (
+              <MaterialCommunityIcons name="book" size={size} color={color} />
+            ),
+          }}
+        />
+        <Tabs.Screen
+          name="tasks/index"
+          options={{
+            title: "Tareas",
+            tabBarIcon: ({ color, size }) => (
+              <MaterialCommunityIcons name="checkbox-marked" size={size} color={color} />
             ),
           }}
         />

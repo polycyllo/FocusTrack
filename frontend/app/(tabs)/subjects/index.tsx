@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 import React, { useState, useEffect, useCallback } from "react";
 import {
   View,
@@ -17,6 +18,25 @@ import UserProfileModal from "@/components/UserProfileModal";
 import { 
   deleteSubjectWithSchedules, 
   getAllSubjectsWithSchedules 
+=======
+import React, { useEffect, useCallback, useState } from "react";
+import { Alert, Pressable, Text, SafeAreaView, View, StyleSheet, FlatList } from "react-native";
+import { useRouter, Href, useFocusEffect } from "expo-router";
+import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
+import Svg, { Path } from "react-native-svg";
+import { ListLayout } from "@/components/layouts/ListLayout";
+import {
+  SubjectCardLayout,
+  SUBJECT_CARD_COLORS,
+  subjectCardStyles,
+} from "@/components/cards/SubjectCardLayout";
+import { usePomodoroStore } from "@/src/store/pomodoro.store";
+import { useAuthStore } from "@/src/store/auth.store";
+import UserProfileModal from "@/components/UserProfileModal";
+import {
+  deleteSubjectWithSchedules,
+  getAllSubjectsWithSchedules,
+>>>>>>> feature/create_task_form
 } from "@/src/features/subjects/repo";
 import Animated, {
   useSharedValue,
@@ -55,6 +75,21 @@ function UserIcon({ size = 24, color = "#fff" }: { size?: number; color?: string
     </Svg>
   );
 }
+<<<<<<< HEAD
+=======
+
+const COLORS = {
+  background: "#9ECDF2",
+  header: "#4A90E2",
+  button: "#70B1EA",
+  card: "#4A90E2",
+  cardText: "#ffffff",
+  chipBg: "rgba(255,255,255,0.18)",
+  chipBorder: "rgba(255,255,255,0.28)",
+};
+
+const AnimatedCardContainer = Animated.View as unknown as ComponentType<ViewProps>;
+>>>>>>> feature/create_task_form
 
 export default function SubjectsScreen() {
   const router = useRouter();
@@ -63,6 +98,13 @@ export default function SubjectsScreen() {
   const [loading, setLoading] = useState(true);
   const [profileModalVisible, setProfileModalVisible] = useState(false);
 
+<<<<<<< HEAD
+=======
+  // Auth store
+  const { isAuthenticated, user, logout } = useAuthStore();
+
+  // 👇 Función para cargar materias desde la DB
+>>>>>>> feature/create_task_form
   const loadSubjects = async () => {
     try {
       setLoading(true);
@@ -120,8 +162,8 @@ export default function SubjectsScreen() {
   };
 
   const handleAlarms = () => {
-    // Navegar a la pantalla de alarmas kike
-    Alert.alert("Aquí Alarmas", "Aquí ya ves como redireccionar a las alarmas kike");
+    // Navegar a la pantalla de alarmas
+    Alert.alert("Aquí Alarmas", "Aquí ya ves como redireccionar a las alarmas");
   };
 
   return (
@@ -211,6 +253,9 @@ function SubjectCard({
 
   const [deleting, setDeleting] = React.useState(false);
 
+  const subjectIdValue = item.subject.subjectId ?? item.subject.subject_id;
+  const subjectTitleValue = item.subject.title || "";
+
   const fillProgress = useSharedValue(0);
   const fillOpacity = useSharedValue(0);
 
@@ -274,13 +319,13 @@ function SubjectCard({
   const cancelDelete = () => setDeleting(false);
 
   const openPomodoroConfig = () => {
-    const subjectId = item.subject.subjectId || item.subject.subject_id;
-    if (subjectId) {
-      setSubject(subjectId.toString());
+    if (subjectIdValue) {
+      setSubject(subjectIdValue.toString());
       router.push("/(tabs)/Pomodoro/PomodoroConfigForm" as Href);
     }
   };
 
+<<<<<<< HEAD
   return (
     <GestureDetector gesture={longPressGesture}>
       <Animated.View style={styles.card}>
@@ -394,6 +439,101 @@ const COLORS = {
   chipBg: "rgba(255,255,255,0.18)",
   chipBorder: "rgba(255,255,255,0.28)",
 };
+=======
+  const openSubjectTasks = () => {
+    if (!subjectIdValue || deleting) return;
+    router.push({
+      pathname: "/(tabs)/tasks",
+      params: {
+        subjectId: String(subjectIdValue),
+        subjectTitle: subjectTitleValue,
+      },
+    });
+  };
+
+  const subtitle =
+    item.schedules && item.schedules.length > 0
+      ? `${item.schedules.length} horario${
+          item.schedules.length !== 1 ? "s" : ""
+        }`
+      : undefined;
+
+  const actions = deleting ? (
+    <>
+      <Pressable
+        hitSlop={10}
+        style={[
+          subjectCardStyles.actionBtn,
+          { backgroundColor: "#e74c3c", borderColor: "#e74c3c" },
+        ]}
+        onPress={confirmDelete}
+      >
+        <MaterialCommunityIcons
+          name="trash-can-outline"
+          size={18}
+          color="#fff"
+        />
+      </Pressable>
+
+      <Pressable
+        hitSlop={10}
+        style={[
+          subjectCardStyles.actionBtn,
+          { backgroundColor: "#95a5a6", borderColor: "#95a5a6" },
+        ]}
+        onPress={cancelDelete}
+      >
+        <MaterialCommunityIcons
+          name="close-circle-outline"
+          size={18}
+          color="#fff"
+        />
+      </Pressable>
+    </>
+  ) : (
+    <>
+      <Pressable
+        hitSlop={10}
+        style={subjectCardStyles.actionBtn}
+        onPress={openPomodoroConfig}
+      >
+        <MaterialCommunityIcons
+          name="timer-plus-outline"
+          size={18}
+          color="#fff"
+        />
+      </Pressable>
+
+      <Pressable
+        hitSlop={10}
+        style={subjectCardStyles.actionBtn}
+        onPress={openSubjectTasks}
+      >
+        <MaterialCommunityIcons
+          name="clipboard-check-multiple-outline"
+          size={18}
+          color="#fff"
+        />
+      </Pressable>
+    </>
+  );
+
+  return (
+    <GestureDetector gesture={longPressGesture}>
+      <SubjectCardLayout
+        Component={Animated.View as any}
+        containerProps={{ style: subjectCardStyles.card }}
+        overlay={<Animated.View style={fillStyle} />}
+        circleColor={item.subject.color || SUBJECT_CARD_COLORS.iconFallback}
+        icon={<Ionicons name="book" size={18} color="#fff" />}
+        title={item.subject.title || "Sin nombre"}
+        subtitle={subtitle}
+        actions={actions}
+      />
+    </GestureDetector>
+  );
+}
+>>>>>>> feature/create_task_form
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: COLORS.background },
@@ -448,6 +588,7 @@ const styles = StyleSheet.create({
     marginTop: 8,
     textAlign: "center",
   },
+<<<<<<< HEAD
   card: {
     flexDirection: "row",
     alignItems: "center",
@@ -495,4 +636,6 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: COLORS.chipBorder,
   },
+=======
+>>>>>>> feature/create_task_form
 });

@@ -1,5 +1,5 @@
 import React, { useCallback, useMemo, useState } from "react";
-import { Alert, Pressable, View } from "react-native";
+import { Alert, Pressable, StyleSheet, View } from "react-native";
 import { useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 
@@ -9,6 +9,7 @@ import {
   SUBJECT_CARD_COLORS,
   subjectCardStyles,
 } from "@/components/cards/SubjectCardLayout";
+import { CompletedTaskCardLayout } from "@/components/cards/CompletedTaskCardLayout";
 import {
   getTasksBySubject,
   updateTaskStatus,
@@ -24,7 +25,26 @@ type TaskRow = {
   color?: string | null;
   icon?: string | null;
   status?: number | null;
+  createdAt?: string | null;
+  created_at?: string | null;
+  completedAt?: string | null;
+  completed_at?: string | null;
 };
+
+const getTaskNumericId = (row: TaskRow) => row.taskId ?? row.task_id ?? 0;
+
+const parseDateToMs = (value?: string | null) => {
+  if (!value) return 0;
+  const isoCandidate = value.includes("T") ? value : value.replace(" ", "T") + "Z";
+  const time = Date.parse(isoCandidate);
+  return Number.isNaN(time) ? 0 : time;
+};
+
+const getCreatedTimestamp = (row: TaskRow) =>
+  parseDateToMs(row.createdAt ?? row.created_at) || getTaskNumericId(row);
+
+const getCompletedTimestamp = (row: TaskRow) =>
+  parseDateToMs(row.completedAt ?? row.completed_at) || getCreatedTimestamp(row);
 
 const SCREEN_COLORS = {
   background: "#9ECDF2",
@@ -60,8 +80,17 @@ export default function TasksListScreen() {
 
     try {
       setLoading(true);
-      const rows = await getTasksBySubject(subjectId);
-      setTasks(rows);
+      const rows = (await getTasksBySubject(subjectId)) as TaskRow[];
+
+      const pending = rows
+        .filter((task) => task.status !== 1)
+        .sort((a, b) => getCreatedTimestamp(b) - getCreatedTimestamp(a));
+
+      const completed = rows
+        .filter((task) => task.status === 1)
+        .sort((a, b) => getCompletedTimestamp(b) - getCompletedTimestamp(a));
+
+      setTasks([...pending, ...completed]);
     } catch (error) {
       console.error("Error cargando tareas:", error);
       Alert.alert("Error", "No se pudieron cargar las tareas.");
@@ -178,17 +207,11 @@ function TaskCard({
 
   const id = item.taskId ?? item.task_id ?? 0;
   const completed = item.status === 1;
-  const statusDotStyle = {
-    width: 18,
-    height: 18,
-    borderRadius: 9,
-    backgroundColor: completed ? "#27AE60" : "#fff",
-    borderWidth: 2,
-    borderColor: completed ? "#1e874c" : "#333",
-  };
+
+  const Layout = completed ? CompletedTaskCardLayout : SubjectCardLayout;
 
   return (
-    <SubjectCardLayout
+    <Layout
       circleColor={item.color || SUBJECT_CARD_COLORS.iconFallback}
       icon={iconNode}
       title={item.title}
@@ -206,13 +229,46 @@ function TaskCard({
             />
           </Pressable>
           <Pressable
-            style={subjectCardStyles.actionBtn}
+            style={taskCardStyles.checkboxButton}
             onPress={() => onToggleStatus(id, item.status)}
           >
-            <View style={statusDotStyle} />
+            <View
+              style={[
+                taskCardStyles.checkboxSquare,
+                completed && taskCardStyles.checkboxSquareCompleted,
+              ]}
+            >
+              {completed ? (
+                <Ionicons name="checkmark" size={14} color="#fff" />
+              ) : null}
+            </View>
           </Pressable>
         </>
       }
     />
   );
 }
+
+const taskCardStyles = StyleSheet.create({
+  checkboxButton: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  checkboxSquare: {
+    width: 24,
+    height: 24,
+    borderRadius: 6,
+    borderWidth: 2,
+    borderColor: "#C5CBD3",
+    backgroundColor: "#fff",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  checkboxSquareCompleted: {
+    borderColor: "#27AE60",
+    backgroundColor: "#27AE60",
+  },
+});

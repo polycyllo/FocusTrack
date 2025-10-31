@@ -105,4 +105,5 @@ CREATE INDEX IF NOT EXISTS idx_reminder_due ON reminder (status, due_at);
   ensureTaskColumn('color', 'color TEXT')
   ensureTaskColumn('icon', 'icon TEXT')
   ensureTaskColumn('created_at', "created_at TEXT DEFAULT (datetime('now'))")
+  ensureTaskColumn('completed_at', 'completed_at TEXT')
 }
