@@ -1,30 +1,8 @@
-<<<<<<< HEAD
-import React, { useState, useEffect, useCallback } from "react";
-import {
-  View,
-  Text,
-  Pressable,
-  StyleSheet,
-  SafeAreaView,
-  FlatList,
-  Alert,
-} from "react-native";
-import { useRouter, Href, useFocusEffect } from "expo-router";
-import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
-import Svg, { Path } from "react-native-svg";
-import { usePomodoroStore } from "@/src/store/pomodoro.store";
-import { useAuthStore } from "@/src/store/auth.store";
-import UserProfileModal from "@/components/UserProfileModal";
-import { 
-  deleteSubjectWithSchedules, 
-  getAllSubjectsWithSchedules 
-=======
 import React, { useEffect, useCallback, useState } from "react";
 import { Alert, Pressable, Text, SafeAreaView, View, StyleSheet, FlatList } from "react-native";
 import { useRouter, Href, useFocusEffect } from "expo-router";
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import Svg, { Path } from "react-native-svg";
-import { ListLayout } from "@/components/layouts/ListLayout";
 import {
   SubjectCardLayout,
   SUBJECT_CARD_COLORS,
@@ -33,11 +11,7 @@ import {
 import { usePomodoroStore } from "@/src/store/pomodoro.store";
 import { useAuthStore } from "@/src/store/auth.store";
 import UserProfileModal from "@/components/UserProfileModal";
-import {
-  deleteSubjectWithSchedules,
-  getAllSubjectsWithSchedules,
->>>>>>> feature/create_task_form
-} from "@/src/features/subjects/repo";
+import { deleteSubjectWithSchedules, getAllSubjectsWithSchedules } from "@/src/features/subjects/repo";
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
@@ -75,8 +49,6 @@ function UserIcon({ size = 24, color = "#fff" }: { size?: number; color?: string
     </Svg>
   );
 }
-<<<<<<< HEAD
-=======
 
 const COLORS = {
   background: "#9ECDF2",
@@ -88,9 +60,6 @@ const COLORS = {
   chipBorder: "rgba(255,255,255,0.28)",
 };
 
-const AnimatedCardContainer = Animated.View as unknown as ComponentType<ViewProps>;
->>>>>>> feature/create_task_form
-
 export default function SubjectsScreen() {
   const router = useRouter();
   const { isAuthenticated, user, logout } = useAuthStore();
@@ -98,13 +67,6 @@ export default function SubjectsScreen() {
   const [loading, setLoading] = useState(true);
   const [profileModalVisible, setProfileModalVisible] = useState(false);
 
-<<<<<<< HEAD
-=======
-  // Auth store
-  const { isAuthenticated, user, logout } = useAuthStore();
-
-  // 👇 Función para cargar materias desde la DB
->>>>>>> feature/create_task_form
   const loadSubjects = async () => {
     try {
       setLoading(true);
@@ -157,19 +119,16 @@ export default function SubjectsScreen() {
   };
 
   const handleStatistics = () => {
-    // Navegar a pantalla de estadísticas
     Alert.alert("Implementar Estadísticas", "Aquí implementariamos las estadísticas del usuario");
   };
 
   const handleAlarms = () => {
-    // Navegar a la pantalla de alarmas
     Alert.alert("Aquí Alarmas", "Aquí ya ves como redireccionar a las alarmas");
   };
 
   return (
     <SafeAreaView style={styles.safe}>
       <View style={styles.container}>
-        {/* Header */}
         <View style={styles.header}>
           <View style={styles.headerLeft}>
             <Text style={styles.headerTitle}>Materias</Text>
@@ -189,7 +148,6 @@ export default function SubjectsScreen() {
               <Text style={styles.createBtnText}>+ Crear</Text>
             </Pressable>
 
-            {/* Botón de usuario con icono SVG */}
             <Pressable
               onPress={handleUserIconPress}
               style={({ pressed }) => [
@@ -202,7 +160,6 @@ export default function SubjectsScreen() {
           </View>
         </View>
 
-        {/* Body */}
         {loading ? (
           <View style={styles.emptyBody}>
             <Text style={styles.emptyText}>Cargando...</Text>
@@ -219,7 +176,7 @@ export default function SubjectsScreen() {
           <FlatList
             contentContainerStyle={{ padding: 12, paddingBottom: 20 }}
             data={subjects}
-            keyExtractor={(item) => 
+            keyExtractor={(item) =>
               (item.subject.subjectId || item.subject.subject_id)?.toString() || ""
             }
             renderItem={({ item }) => (
@@ -229,7 +186,6 @@ export default function SubjectsScreen() {
         )}
       </View>
 
-      {/* Modal de perfil de usuario */}
       <UserProfileModal
         visible={profileModalVisible}
         onClose={() => setProfileModalVisible(false)}
@@ -241,10 +197,10 @@ export default function SubjectsScreen() {
   );
 }
 
-function SubjectCard({ 
-  item, 
-  onDeleted 
-}: { 
+function SubjectCard({
+  item,
+  onDeleted
+}: {
   item: { subject: SubjectFromDB; schedules: ScheduleFromDB[] };
   onDeleted: () => void;
 }) {
@@ -290,7 +246,7 @@ function SubjectCard({
 
   const confirmDelete = async () => {
     const subjectId = item.subject.subjectId || item.subject.subject_id;
-    
+
     Alert.alert(
       "Confirmar eliminación",
       `¿Eliminar la materia "${item.subject.title}"?`,
@@ -325,121 +281,6 @@ function SubjectCard({
     }
   };
 
-<<<<<<< HEAD
-  return (
-    <GestureDetector gesture={longPressGesture}>
-      <Animated.View style={styles.card}>
-        <Animated.View style={fillStyle} />
-
-        <View
-          style={{
-            flexDirection: "row",
-            alignItems: "center",
-            gap: 12,
-            flex: 1,
-          }}
-        >
-          <View
-            style={[
-              styles.iconCircle,
-              { backgroundColor: item.subject.color || "#70B1EA" },
-            ]}
-          >
-            <Ionicons name="book" size={18} color="#fff" />
-          </View>
-
-          <View style={{ flex: 1 }}>
-            <Text
-              numberOfLines={2}
-              ellipsizeMode="tail"
-              style={styles.cardTitle}
-            >
-              {item.subject.title || "Sin nombre"}
-            </Text>
-            {item.schedules && item.schedules.length > 0 && (
-              <Text style={styles.scheduleText}>
-                {item.schedules.length} horario{item.schedules.length !== 1 ? "s" : ""}
-              </Text>
-            )}
-          </View>
-        </View>
-
-        <View style={styles.actions}>
-          {deleting ? (
-            <>
-              <Pressable
-                hitSlop={10}
-                style={[
-                  styles.actionBtn,
-                  { backgroundColor: "#e74c3c", borderColor: "#e74c3c" },
-                ]}
-                onPress={confirmDelete}
-              >
-                <MaterialCommunityIcons
-                  name="trash-can-outline"
-                  size={18}
-                  color="#fff"
-                />
-              </Pressable>
-
-              <Pressable
-                hitSlop={10}
-                style={[
-                  styles.actionBtn,
-                  { backgroundColor: "#95a5a6", borderColor: "#95a5a6" },
-                ]}
-                onPress={cancelDelete}
-              >
-                <MaterialCommunityIcons
-                  name="close-circle-outline"
-                  size={18}
-                  color="#fff"
-                />
-              </Pressable>
-            </>
-          ) : (
-            <>
-              <Pressable
-                hitSlop={10}
-                style={styles.actionBtn}
-                onPress={openPomodoroConfig}
-              >
-                <MaterialCommunityIcons
-                  name="timer-plus-outline"
-                  size={18}
-                  color="#fff"
-                />
-              </Pressable>
-
-              <Pressable
-                hitSlop={10}
-                style={styles.actionBtn}
-                onPress={() => {}}
-              >
-                <MaterialCommunityIcons
-                  name="clipboard-check-multiple-outline"
-                  size={18}
-                  color="#fff"
-                />
-              </Pressable>
-            </>
-          )}
-        </View>
-      </Animated.View>
-    </GestureDetector>
-  );
-}
-
-const COLORS = {
-  background: "#9ECDF2",
-  header: "#4A90E2",
-  button: "#70B1EA",
-  card: "#4A90E2",
-  cardText: "#ffffff",
-  chipBg: "rgba(255,255,255,0.18)",
-  chipBorder: "rgba(255,255,255,0.28)",
-};
-=======
   const openSubjectTasks = () => {
     if (!subjectIdValue || deleting) return;
     router.push({
@@ -453,9 +294,7 @@ const COLORS = {
 
   const subtitle =
     item.schedules && item.schedules.length > 0
-      ? `${item.schedules.length} horario${
-          item.schedules.length !== 1 ? "s" : ""
-        }`
+      ? `${item.schedules.length} horario${item.schedules.length !== 1 ? "s" : ""}`
       : undefined;
 
   const actions = deleting ? (
@@ -533,7 +372,6 @@ const COLORS = {
     </GestureDetector>
   );
 }
->>>>>>> feature/create_task_form
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: COLORS.background },
@@ -550,10 +388,10 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   headerTitle: { color: "#fff", fontSize: 18, fontWeight: "600" },
-  userGreeting: { 
-    color: "rgba(255,255,255,0.8)", 
-    fontSize: 12, 
-    marginTop: 2 
+  userGreeting: {
+    color: "rgba(255,255,255,0.8)",
+    fontSize: 12,
+    marginTop: 2
   },
   headerButtons: { flexDirection: "row", gap: 8, alignItems: "center" },
   createBtn: {
@@ -570,15 +408,15 @@ const styles = StyleSheet.create({
     padding: 8,
     borderRadius: 8,
   },
-  emptyBody: { 
-    flex: 1, 
-    alignItems: "center", 
+  emptyBody: {
+    flex: 1,
+    alignItems: "center",
     justifyContent: "center",
     paddingHorizontal: 40,
   },
-  emptyText: { 
-    color: "#0A0A0A", 
-    fontSize: 16, 
+  emptyText: {
+    color: "#0A0A0A",
+    fontSize: 16,
     fontWeight: "700",
     marginTop: 16,
   },
@@ -588,54 +426,4 @@ const styles = StyleSheet.create({
     marginTop: 8,
     textAlign: "center",
   },
-<<<<<<< HEAD
-  card: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    backgroundColor: COLORS.card,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    borderRadius: 14,
-    shadowColor: "#000",
-    shadowOpacity: 0.08,
-    shadowOffset: { width: 0, height: 2 },
-    shadowRadius: 6,
-    elevation: 2,
-    marginBottom: 10,
-    overflow: "hidden",
-  },
-  iconCircle: {
-    width: 38,
-    height: 38,
-    borderRadius: 19,
-    alignItems: "center",
-    justifyContent: "center",
-    borderWidth: 1,
-    borderColor: COLORS.chipBorder,
-  },
-  cardTitle: {
-    color: COLORS.cardText,
-    fontWeight: "700",
-    fontSize: 15,
-    lineHeight: 20,
-  },
-  scheduleText: {
-    color: "rgba(255,255,255,0.7)",
-    fontSize: 12,
-    marginTop: 2,
-  },
-  actions: { flexDirection: "row", gap: 8, marginLeft: 8 },
-  actionBtn: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: COLORS.chipBg,
-    borderWidth: 1,
-    borderColor: COLORS.chipBorder,
-  },
-=======
->>>>>>> feature/create_task_form
 });
