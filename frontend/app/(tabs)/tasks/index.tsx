@@ -134,7 +134,14 @@ export default function TasksListScreen() {
       return;
     }
     setSubject(String(subjectId));
-    router.push("/(tabs)/Pomodoro/PomodoroConfigForm");
+    router.push({
+      pathname: "/(tabs)/Pomodoro/PomodoroConfigForm" as any,
+      params: {
+        returnTo: "/(tabs)/tasks",
+        subjectId: subjectIdParam,
+        subjectTitle: subjectTitle ?? "",
+      },
+    });
   };
 
   const toggleTaskStatus = async (

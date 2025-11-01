@@ -277,7 +277,10 @@ function SubjectCard({
   const openPomodoroConfig = () => {
     if (subjectIdValue) {
       setSubject(subjectIdValue.toString());
-      router.push("/(tabs)/Pomodoro/PomodoroConfigForm" as Href);
+      router.push({
+        pathname: "/(tabs)/Pomodoro/PomodoroConfigForm" as Href,
+        params: { returnTo: "/(tabs)/subjects" },
+      });
     }
   };
 
