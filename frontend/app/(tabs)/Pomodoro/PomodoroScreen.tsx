@@ -113,9 +113,7 @@ export default function PomodoroScreen() {
     const previousMode = prevMode.current;
 
     if (session.mode !== previousMode) {
-      if (previousMode === "focus" && session.mode === "short") {
-        void playBell();
-      } else if (previousMode === "short" && session.mode === "focus") {
+      if (hasStarted) {
         void playBell();
       }
 
@@ -146,6 +144,7 @@ export default function PomodoroScreen() {
     isIdle,
     startAutoStartCountdown,
     clearAutoStartCountdown,
+    hasStarted,
   ]);
 
   useEffect(() => {
