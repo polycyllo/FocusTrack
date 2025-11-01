@@ -150,6 +150,7 @@ export default function TasksListScreen() {
   return (
     <ListLayout
       title={headerTitle}
+      onBackPress={() => router.back()}
       actionLabel="+ Crear tarea"
       onActionPress={goCreate}
       data={tasks}
