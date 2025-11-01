@@ -53,6 +53,11 @@ const SCREEN_COLORS = {
   emptyText: "#0A0A0A",
 };
 
+const truncateTitle = (value: string, maxLength: number) =>
+  value.length > maxLength
+    ? `${value.slice(0, maxLength).trimEnd()}...`
+    : value;
+
 export default function TasksListScreen() {
   const setSubject = usePomodoroStore((s) => s.setSubject);
   const router = useRouter();
@@ -66,10 +71,10 @@ export default function TasksListScreen() {
   const [tasks, setTasks] = useState<TaskRow[]>([]);
   const [loading, setLoading] = useState(true);
 
-  const headerTitle = useMemo(
-    () => (subjectTitle ? `Tareas - ${subjectTitle}` : "Tareas"),
-    [subjectTitle]
-  );
+  const headerTitle = useMemo(() => {
+    const fullTitle = subjectTitle ? `Tareas - ${subjectTitle}` : "Tareas";
+    return truncateTitle(fullTitle, 23);
+  }, [subjectTitle]);
 
   const loadTasks = useCallback(async () => {
     if (!subjectId) {
