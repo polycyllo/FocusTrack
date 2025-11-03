@@ -41,7 +41,7 @@ export const SectionTitle: React.FC<{ children: React.ReactNode }> = ({
   </Text>
 );
 
-/* -------------------- AlarmCard -------------------- */
+/*AlarmCard*/
 export const AlarmCard: React.FC<{
   alarm: Alarm;
   onToggle: (active: boolean) => void;
@@ -49,35 +49,57 @@ export const AlarmCard: React.FC<{
   onDelete: () => void;
 }> = ({ alarm, onToggle, onEdit, onDelete }) => {
   const isActive = alarm.active;
-
   const customByDay = (alarm as any).customByDay as
     | Record<string, string[]>
     | undefined;
 
-  const sub = useMemo(() => {
-    if (customByDay && Object.keys(customByDay).length) {
-      const keys = Object.keys(customByDay);
-      const sample = keys
-        .slice(0, 2)
-        .map((d) => `${d}: ${customByDay[d].slice(0, 1).join(",")}`)
-        .join(" · ");
-      return `Personalizada por día${sample ? " — " + sample : ""}`;
+  // 🧠 Construir texto legible de recurrencia
+  const recurrence = useMemo(() => {
+    if (alarm.repeatType === "once") {
+      return `📅 ${alarm.date ?? "Sin fecha"}  •  🕗 ${alarm.time ?? "—"}`;
     }
-    return alarm.repeatType === "custom"
-      ? `Repite: ${(alarm.repeatDays ?? []).map((d) => DAY_LABEL[d]).join("-")}`
-      : `Repite: ${alarm.repeatType === "daily" ? "Diario" : "Única vez"}`;
+
+    if (alarm.repeatType === "daily") {
+      const times = alarm.times?.join(", ") ?? alarm.time ?? "--:--";
+      return `🕗 ${times}  •  Diario`;
+    }
+
+    if (alarm.repeatType === "custom") {
+      if (customByDay && Object.keys(customByDay).length) {
+        return Object.keys(customByDay)
+          .map((d) => `${DAY_LABEL[d]}: ${(customByDay[d] ?? []).join(", ")}`)
+          .join("  •  ");
+      }
+      const days = (alarm.repeatDays ?? []).map((d) => DAY_LABEL[d]).join(", ");
+      const times = (alarm.times ?? []).join(", ");
+      return `📅 ${days || "Sin días"}  •  🕗 ${times || "Sin horas"}`;
+    }
+
+    return "Sin configuración de repetición";
   }, [alarm, customByDay]);
 
-  const displayTime = useMemo(() => {
-    if (customByDay && Object.keys(customByDay).length) {
-      const all = Object.values(customByDay).flat();
-      if (all.length) return [...all].sort(compareTimeAsc)[0];
-    }
-    return alarm.time ?? alarm.times?.[0] ?? "--:--";
-  }, [alarm, customByDay]);
+  const bgColor =
+    alarm.repeatType === "daily"
+      ? "#A8E6CF"
+      : alarm.repeatType === "custom"
+      ? "#FFD3B6"
+      : "#D4F3EE";
 
   return (
-    <View style={styles.card}>
+    <View
+      style={[
+        styles.card,
+        {
+          backgroundColor: bgColor,
+          borderLeftWidth: 4,
+          borderLeftColor: isActive ? COLORS.primaryDark : "#999",
+          shadowColor: "#000",
+          shadowOpacity: 0.1,
+          shadowRadius: 4,
+          elevation: 2,
+        },
+      ]}
+    >
       <Pressable
         onPress={() => onToggle(!isActive)}
         style={{ paddingRight: 10 }}
@@ -88,31 +110,52 @@ export const AlarmCard: React.FC<{
           color={COLORS.primaryDark}
         />
       </Pressable>
+
       <View style={{ flex: 1 }}>
-        <Text style={styles.cardTitle}>
-          {displayTime} — {alarm.title}
+        <Text
+          style={[
+            styles.cardTitle,
+            {
+              color: COLORS.primaryDark,
+              marginBottom: 4,
+              fontSize: 15,
+              fontWeight: "700",
+            },
+          ]}
+          numberOfLines={1}
+        >
+          {alarm.title || "Alarma sin título"}
         </Text>
-        <Text style={styles.cardSub}>{sub}</Text>
+
+        <Text
+          style={[styles.cardSub, { color: COLORS.primaryDark, opacity: 0.9 }]}
+          numberOfLines={3}
+        >
+          {recurrence}
+        </Text>
       </View>
-      <Pressable onPress={onEdit} style={{ paddingHorizontal: 8 }}>
-        <MaterialCommunityIcons
-          name="clock-edit"
-          size={22}
-          color={COLORS.primaryDark}
-        />
-      </Pressable>
-      <Pressable onPress={onDelete} style={{ paddingLeft: 8 }}>
-        <MaterialCommunityIcons
-          name="trash-can-outline"
-          size={22}
-          color={COLORS.danger}
-        />
-      </Pressable>
+
+      <View style={{ flexDirection: "row", alignItems: "center" }}>
+        <Pressable onPress={onEdit} style={{ paddingHorizontal: 6 }}>
+          <MaterialCommunityIcons
+            name="clock-edit"
+            size={22}
+            color={COLORS.primaryDark}
+          />
+        </Pressable>
+        <Pressable onPress={onDelete} style={{ paddingLeft: 6 }}>
+          <MaterialCommunityIcons
+            name="trash-can-outline"
+            size={22}
+            color={COLORS.danger}
+          />
+        </Pressable>
+      </View>
     </View>
   );
 };
 
-/* -------------------- RepeatTypeChips -------------------- */
+/*RepeatTypeChips*/
 export const RepeatTypeChips: React.FC<{
   value: "once" | "daily" | "custom";
   onChange: (v: "once" | "daily" | "custom") => void;
@@ -136,7 +179,7 @@ export const RepeatTypeChips: React.FC<{
   );
 };
 
-/* -------------------- DaySelector -------------------- */
+/* DaySelector  */
 export const DaySelector: React.FC<{
   selected: string[];
   onChange: (days: string[]) => void;
@@ -166,7 +209,7 @@ export const DaySelector: React.FC<{
   );
 };
 
-/* -------------------- TimeRow -------------------- */
+/* timeRow*/
 export const TimeRow: React.FC<{
   value: string;
   onChange: (hhmm: string) => void;
@@ -211,7 +254,7 @@ export const TimeRow: React.FC<{
   );
 };
 
-/* -------------------- MultiTimes -------------------- */
+/* MultiTime*/
 export const MultiTimes: React.FC<{
   values: string[];
   onChange: (times: string[]) => void;
@@ -248,7 +291,7 @@ export const MultiTimes: React.FC<{
   );
 };
 
-/* -------------------- TonePicker -------------------- */
+/* tonePicker */
 export const TonePicker: React.FC<{
   value: string;
   onChange: (toneKey: string) => void;
@@ -305,7 +348,7 @@ export const TonePicker: React.FC<{
   );
 };
 
-/* -------------------- ConfirmDeleteModal -------------------- */
+/* ConfirmDeleteModal*/
 export const ConfirmDeleteModal: React.FC<{
   visible: boolean;
   onCancel: () => void;
@@ -345,7 +388,7 @@ export const ConfirmDeleteModal: React.FC<{
   </Modal>
 );
 
-/* -------------------- SaveToast -------------------- */
+/* SaveToast*/
 export const SaveToast: React.FC<{ visible: boolean; text?: string }> = ({
   visible,
   text = "Alarma guardada correctamente",
@@ -358,7 +401,7 @@ export const SaveToast: React.FC<{ visible: boolean; text?: string }> = ({
   );
 };
 
-/* -------------------- styles -------------------- */
+/* styles */
 const styles = StyleSheet.create({
   card: {
     backgroundColor: COLORS.card,
