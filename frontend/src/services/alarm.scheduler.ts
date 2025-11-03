@@ -3,7 +3,36 @@ import { Platform } from "react-native";
 import { Alarm, DayMap } from "../types/alarms";
 import { dayLetterToWeekday } from "../utils/time";
 import { DAY_LABEL, DAYS } from "../utils/time";
+
 const ROLLING_WEEKS = 4;
+
+async function scheduleExactAndroid(
+  alarm: Alarm,
+  date: Date,
+  bodyText: string
+) {
+  if (Platform.OS !== "android") return false;
+  try {
+    await Notifications.scheduleNotificationAsync({
+      content: {
+        title: alarm.title || "Alarma",
+        body: bodyText,
+        sound: alarm.tone === "bell" ? "bell" : "default",
+        priority: Notifications.AndroidNotificationPriority.MAX,
+      },
+      trigger: {
+        type: Notifications.SchedulableTriggerInputTypes.DATE,
+        date,
+        allowWhileIdle: true,
+        channelId: alarm.tone === "bell" ? "alarm-bell" : "default",
+      } as any,
+    });
+    return true;
+  } catch (err) {
+    console.warn("⚠️ scheduleExactAndroid fallback:", err);
+    return false;
+  }
+}
 
 function nextDateForWeekday(
   from: Date,
@@ -14,13 +43,9 @@ function nextDateForWeekday(
   const targetJS = targetWeekday1to7 === 7 ? 6 : targetWeekday1to7 - 1;
   const d = new Date(from);
   d.setHours(hour, minute, 0, 0);
-
   const dayDiff = (targetJS - d.getDay() + 7) % 7;
-  if (dayDiff === 0 && d <= from) {
-    d.setDate(d.getDate() + 7);
-  } else {
-    d.setDate(d.getDate() + dayDiff);
-  }
+  if (dayDiff === 0 && d <= from) d.setDate(d.getDate() + 7);
+  else d.setDate(d.getDate() + dayDiff);
   return d;
 }
 
@@ -33,10 +58,9 @@ function nextNWeeklyDates(
 ) {
   const dates: Date[] = [];
   let first = nextDateForWeekday(from, targetWeekday1to7, hour, minute);
-  dates.push(first);
-  for (let i = 1; i < nWeeks; i++) {
+  for (let i = 0; i < nWeeks; i++) {
     const d = new Date(first);
-    d.setDate(d.getDate() + 7 * i);
+    d.setDate(first.getDate() + 7 * i);
     dates.push(d);
   }
   return dates;
@@ -54,137 +78,87 @@ function parseHHmm(t: string): { hour: number; minute: number; text: string } {
   return { hour: h, minute: m, text };
 }
 
-async function scheduleOne(
-  alarm: Alarm,
-  opts: {
-    weekday?: number;
-    hour: number;
-    minute: number;
-    text: string;
-    repeats?: boolean;
-  }
-) {
-  const androidChannelId = alarm.tone === "bell" ? "alarm-bell" : "default";
-
-  const iosSound: Notifications.NotificationContentInput["sound"] =
-    Platform.OS === "ios"
-      ? alarm.tone === "bell"
-        ? "bell"
-        : "default"
-      : undefined;
-
-  const trigger: any = opts.weekday
-    ? {
-        type: Notifications.SchedulableTriggerInputTypes.DATE,
-        date: nextDateForWeekday(
-          new Date(),
-          opts.weekday,
-          opts.hour,
-          opts.minute
-        ),
-        channelId: Platform.OS === "android" ? androidChannelId : undefined,
-      }
-    : {
-        type: Notifications.SchedulableTriggerInputTypes.DATE,
-        date: (() => {
-          const now = new Date();
-          const when = new Date(now);
-          when.setHours(opts.hour, opts.minute, 0, 0);
-          if (when.getTime() <= now.getTime()) when.setDate(when.getDate() + 1);
-          return when;
-        })(),
-        channelId: Platform.OS === "android" ? androidChannelId : undefined,
-      };
-
-  await Notifications.scheduleNotificationAsync({
-    content: {
-      title: alarm.title || "Alarma",
-      body: buildBody(alarm, opts.text),
-      data: { alarmId: alarm.id, type: alarm.type, time: opts.text },
-      sound: iosSound ?? "default",
-      priority: Notifications.AndroidNotificationPriority.HIGH,
-    },
-    trigger,
-  });
-}
-
 export async function scheduleAlarm(alarm: Alarm) {
   if (!alarm.active) return;
 
+  await Notifications.cancelAllScheduledNotificationsAsync();
+
+  const now = new Date();
+
+  // === Diario ===
   if (alarm.repeatType === "daily") {
     const base = alarm.time ?? alarm.times?.[0];
     if (!base) return;
     const { hour, minute, text } = parseHHmm(base);
-    await Notifications.scheduleNotificationAsync({
-      content: {
-        title: alarm.title || "Alarma",
-        body: buildBody(alarm, text),
-        data: { alarmId: alarm.id, type: alarm.type, time: text },
-        sound:
-          Platform.OS === "ios"
-            ? alarm.tone === "bell"
-              ? "bell"
-              : "default"
-            : "default",
-        priority: Notifications.AndroidNotificationPriority.HIGH,
-      },
-      trigger:
-        Platform.OS === "android"
-          ? {
-              type: Notifications.SchedulableTriggerInputTypes.DAILY,
-              hour,
-              minute,
-              channelId: alarm.tone === "bell" ? "alarm-bell" : "default",
-            }
-          : {
-              type: Notifications.SchedulableTriggerInputTypes.DAILY,
-              hour,
-              minute,
-            },
-    });
+    const when = new Date();
+    when.setHours(hour, minute, 0, 0);
+    if (when.getTime() <= now.getTime()) when.setDate(when.getDate() + 1);
+
+    const bodyText = buildBody(alarm, text);
+
+    if (Platform.OS === "android") {
+      await scheduleExactAndroid(alarm, when, bodyText);
+    } else {
+      await Notifications.scheduleNotificationAsync({
+        content: {
+          title: alarm.title || "Alarma",
+          body: bodyText,
+          data: { alarmId: alarm.id, type: alarm.type, time: text },
+          sound:
+            Platform.OS === "ios"
+              ? alarm.tone === "bell"
+                ? "bell"
+                : "default"
+              : "default",
+          priority: Notifications.AndroidNotificationPriority.HIGH,
+        },
+        trigger: {
+          type: Notifications.SchedulableTriggerInputTypes.DATE,
+          date: when,
+        },
+      });
+    }
     return;
   }
 
+  // === Única vez ===
   if (alarm.repeatType === "once" && alarm.date) {
     const { hour, minute, text } = parseHHmm(alarm.time ?? "08:00");
     const [y, m, d] = alarm.date.split("-").map(Number);
     const when = new Date(y, (m ?? 1) - 1, d, hour, minute, 0, 0);
-    await Notifications.scheduleNotificationAsync({
-      content: {
-        title: alarm.title || "Alarma",
-        body: buildBody(alarm, text),
-        data: { alarmId: alarm.id, type: alarm.type, time: text },
-        sound:
-          Platform.OS === "ios"
-            ? alarm.tone === "bell"
-              ? "bell"
-              : "default"
-            : "default",
-        priority: Notifications.AndroidNotificationPriority.HIGH,
-      },
-      trigger:
-        Platform.OS === "android"
-          ? {
-              type: Notifications.SchedulableTriggerInputTypes.DATE,
-              date: when,
-              channelId: alarm.tone === "bell" ? "alarm-bell" : "default",
-            }
-          : {
-              type: Notifications.SchedulableTriggerInputTypes.DATE,
-              date: when,
-            },
-    });
+    if (when.getTime() <= now.getTime()) return; // Ignorar fechas pasadas
+
+    const bodyText = buildBody(alarm, text);
+    if (Platform.OS === "android")
+      await scheduleExactAndroid(alarm, when, bodyText);
+    else
+      await Notifications.scheduleNotificationAsync({
+        content: {
+          title: alarm.title || "Alarma",
+          body: bodyText,
+          data: { alarmId: alarm.id, type: alarm.type, time: text },
+          sound:
+            Platform.OS === "ios"
+              ? alarm.tone === "bell"
+                ? "bell"
+                : "default"
+              : "default",
+          priority: Notifications.AndroidNotificationPriority.HIGH,
+        },
+        trigger: {
+          type: Notifications.SchedulableTriggerInputTypes.DATE,
+          date: when,
+        },
+      });
     return;
   }
 
+  // === Personalizada ===
   if (alarm.repeatType === "custom") {
     if (alarm.customByDay && Object.keys(alarm.customByDay).length) {
-      const map = alarm.customByDay as DayMap;
-      const now = new Date();
-
-      for (const letter of Object.keys(map)) {
+      for (const letter of Object.keys(alarm.customByDay)) {
         const weekday = dayLetterToWeekday(letter);
-        for (const t of map[letter]) {
+        for (const t of alarm.customByDay[letter]) {
           const { hour, minute, text } = parseHHmm(t);
           const dates = nextNWeeklyDates(
             now,
@@ -193,34 +167,31 @@ export async function scheduleAlarm(alarm: Alarm) {
             minute,
             ROLLING_WEEKS
           );
+          const bodyText = buildBody(alarm, text);
 
           for (const date of dates) {
-            await Notifications.scheduleNotificationAsync({
-              content: {
-                title: alarm.title || "Alarma",
-                body: buildBody(alarm, text),
-                data: { alarmId: alarm.id, type: alarm.type, time: text },
-                sound:
-                  Platform.OS === "ios"
-                    ? alarm.tone === "bell"
-                      ? "bell"
-                      : "default"
-                    : "default",
-                priority: Notifications.AndroidNotificationPriority.HIGH,
-              },
-              trigger:
-                Platform.OS === "android"
-                  ? {
-                      type: Notifications.SchedulableTriggerInputTypes.DATE,
-                      date,
-                      channelId:
-                        alarm.tone === "bell" ? "alarm-bell" : "default",
-                    }
-                  : {
-                      type: Notifications.SchedulableTriggerInputTypes.DATE,
-                      date,
-                    },
-            });
+            if (date.getTime() <= now.getTime()) continue; // Ignorar pasadas
+            if (Platform.OS === "android")
+              await scheduleExactAndroid(alarm, date, bodyText);
+            else
+              await Notifications.scheduleNotificationAsync({
+                content: {
+                  title: alarm.title || "Alarma",
+                  body: bodyText,
+                  data: { alarmId: alarm.id, type: alarm.type, time: text },
+                  sound:
+                    Platform.OS === "ios"
+                      ? alarm.tone === "bell"
+                        ? "bell"
+                        : "default"
+                      : "default",
+                  priority: Notifications.AndroidNotificationPriority.HIGH,
+                },
+                trigger: {
+                  type: Notifications.SchedulableTriggerInputTypes.DATE,
+                  date,
+                },
+              });
           }
         }
       }
@@ -228,8 +199,6 @@ export async function scheduleAlarm(alarm: Alarm) {
     }
 
     if (alarm.repeatDays?.length && alarm.times?.length) {
-      const now = new Date();
-
       for (const letter of alarm.repeatDays) {
         const weekday = dayLetterToWeekday(letter);
         for (const t of alarm.times) {
@@ -241,34 +210,31 @@ export async function scheduleAlarm(alarm: Alarm) {
             minute,
             ROLLING_WEEKS
           );
+          const bodyText = buildBody(alarm, text);
 
           for (const date of dates) {
-            await Notifications.scheduleNotificationAsync({
-              content: {
-                title: alarm.title || "Alarma",
-                body: buildBody(alarm, text),
-                data: { alarmId: alarm.id, type: alarm.type, time: text },
-                sound:
-                  Platform.OS === "ios"
-                    ? alarm.tone === "bell"
-                      ? "bell"
-                      : "default"
-                    : "default",
-                priority: Notifications.AndroidNotificationPriority.HIGH,
-              },
-              trigger:
-                Platform.OS === "android"
-                  ? {
-                      type: Notifications.SchedulableTriggerInputTypes.DATE,
-                      date,
-                      channelId:
-                        alarm.tone === "bell" ? "alarm-bell" : "default",
-                    }
-                  : {
-                      type: Notifications.SchedulableTriggerInputTypes.DATE,
-                      date,
-                    },
-            });
+            if (date.getTime() <= now.getTime()) continue; // Ignorar pasadas
+            if (Platform.OS === "android")
+              await scheduleExactAndroid(alarm, date, bodyText);
+            else
+              await Notifications.scheduleNotificationAsync({
+                content: {
+                  title: alarm.title || "Alarma",
+                  body: bodyText,
+                  data: { alarmId: alarm.id, type: alarm.type, time: text },
+                  sound:
+                    Platform.OS === "ios"
+                      ? alarm.tone === "bell"
+                        ? "bell"
+                        : "default"
+                      : "default",
+                  priority: Notifications.AndroidNotificationPriority.HIGH,
+                },
+                trigger: {
+                  type: Notifications.SchedulableTriggerInputTypes.DATE,
+                  date,
+                },
+              });
           }
         }
       }
@@ -278,7 +244,10 @@ export async function scheduleAlarm(alarm: Alarm) {
     const base = alarm.time ?? alarm.times?.[0];
     if (base) {
       const { hour, minute, text } = parseHHmm(base);
-      await scheduleOne(alarm, { hour, minute, text });
+      const when = new Date();
+      when.setHours(hour, minute, 0, 0);
+      if (when.getTime() <= now.getTime()) when.setDate(when.getDate() + 1);
+      await scheduleExactAndroid(alarm, when, buildBody(alarm, text));
     }
   }
 }
@@ -341,13 +310,7 @@ export async function presentStatusNotification(
   const body =
     action === "removed" ? `${alarm.title}` : `${alarm.title} — ${rec}`;
   await Notifications.scheduleNotificationAsync({
-    content: {
-      title,
-      body,
-      data: { alarmId: alarm.id, action },
-      sound: "default",
-      priority: Notifications.AndroidNotificationPriority.DEFAULT,
-    },
+    content: { title, body, sound: "default" },
     trigger: null,
   });
 }
