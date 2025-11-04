@@ -8,6 +8,7 @@ import {
   Text,
   View,
 } from "react-native";
+import { Ionicons } from "@expo/vector-icons";
 
 type ListLayoutColors = {
   background: string;
@@ -39,6 +40,7 @@ export type ListLayoutProps<T> = {
   loadingMessage?: string;
   colors?: Partial<ListLayoutColors>;
   listProps?: Omit<FlatListProps<T>, "data" | "renderItem" | "keyExtractor">;
+  onBackPress?: () => void;
 };
 
 export function ListLayout<T>({
@@ -53,6 +55,7 @@ export function ListLayout<T>({
   loadingMessage = "Cargando...",
   colors,
   listProps,
+  onBackPress,
 }: ListLayoutProps<T>) {
   const palette: ListLayoutColors = { ...DEFAULT_COLORS, ...colors };
   const styles = useMemo(() => createStyles(palette), [palette]);
@@ -61,7 +64,14 @@ export function ListLayout<T>({
     <SafeAreaView style={styles.safe}>
       <View style={styles.container}>
         <View style={styles.header}>
-          <Text style={styles.headerTitle}>{title}</Text>
+          <View style={styles.headerLeft}>
+            {onBackPress ? (
+              <Pressable style={styles.backBtn} onPress={onBackPress}>
+                <Ionicons name="chevron-back" size={22} color={palette.headerText} />
+              </Pressable>
+            ) : null}
+            <Text style={styles.headerTitle}>{title}</Text>
+          </View>
           <Pressable
             onPress={onActionPress}
             style={({ pressed }) => [styles.actionBtn, pressed && styles.pressed]}
@@ -103,7 +113,17 @@ const createStyles = (palette: ListLayoutColors) =>
       alignItems: "center",
       justifyContent: "space-between",
     },
+    headerLeft: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 8,
+      flexShrink: 1,
+    },
     headerTitle: { color: palette.headerText, fontSize: 18, fontWeight: "600" },
+    backBtn: {
+      padding: 4,
+      borderRadius: 8,
+    },
     actionBtn: {
       backgroundColor: palette.action,
       borderColor: palette.action,

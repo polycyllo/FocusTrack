@@ -8,12 +8,50 @@ import {
   Alert,
 } from "react-native";
 import Slider from "@react-native-community/slider";
-import { useRouter, Href } from "expo-router";
+import { useRouter, Href, useLocalSearchParams } from "expo-router";
+import { Ionicons } from "@expo/vector-icons";
 
 import { usePomodoroStore } from "@/src/store/pomodoro.store";
 
 export default function PomodoroConfigForm() {
   const router = useRouter();
+  const {
+    returnTo,
+    subjectId: subjectIdParam,
+    subjectTitle: subjectTitleParam,
+  } = useLocalSearchParams<{
+    returnTo?: string;
+    subjectId?: string;
+    subjectTitle?: string;
+  }>();
+
+  const targetPath = Array.isArray(returnTo) ? returnTo[0] : returnTo;
+  const targetSubjectId = Array.isArray(subjectIdParam)
+    ? subjectIdParam[0]
+    : subjectIdParam;
+  const targetSubjectTitle = Array.isArray(subjectTitleParam)
+    ? subjectTitleParam[0]
+    : subjectTitleParam;
+
+  const handleBack = () => {
+    if (targetPath) {
+      const params: Record<string, string> = {};
+      if (targetSubjectId) params.subjectId = targetSubjectId;
+      if (targetSubjectTitle) params.subjectTitle = targetSubjectTitle;
+
+      router.replace({
+        pathname: targetPath as any,
+        params: Object.keys(params).length ? params : undefined,
+      } as any);
+      return;
+    }
+
+    if (router.canGoBack()) {
+      router.back();
+    } else {
+      router.replace("/(tabs)/subjects" as Href);
+    }
+  };
 
   const config = usePomodoroStore((s) => s.config);
   const setConfig = usePomodoroStore((s) => s.setConfig);
@@ -54,7 +92,13 @@ export default function PomodoroConfigForm() {
       <View style={styles.container}>
         {/* Header */}
         <View style={styles.header}>
-          <Text style={styles.headerTitle}>Configuración Pomodoro</Text>
+          <Pressable style={styles.backBtn} onPress={handleBack}>
+            <Ionicons name="chevron-back" size={22} color="#fff" />
+          </Pressable>
+          <Text style={styles.headerTitle} numberOfLines={1}>
+            Configuración Pomodoro
+          </Text>
+          <View style={styles.headerRightSpacer} />
         </View>
 
         {/* Body */}
@@ -138,10 +182,24 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.header,
     paddingHorizontal: 16,
     paddingVertical: 12,
+    flexDirection: "row",
     alignItems: "center",
-    justifyContent: "center",
+    justifyContent: "space-between",
   },
-  headerTitle: { color: "#ffffff", fontSize: 18, fontWeight: "600" },
+  backBtn: {
+    padding: 4,
+    borderRadius: 8,
+  },
+  headerTitle: {
+    color: "#ffffff",
+    fontSize: 18,
+    fontWeight: "600",
+    flex: 1,
+    textAlign: "center",
+  },
+  headerRightSpacer: {
+    width: 22,
+  },
   body: { flex: 1, padding: 20, justifyContent: "space-between" },
   label: { fontSize: 16, marginTop: 15, color: "#0d47a1" },
   slider: { width: "100%", height: 40 },

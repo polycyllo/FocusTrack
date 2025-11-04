@@ -25,7 +25,8 @@ export default function TabLayout() {
         screenOptions={{
           tabBarActiveTintColor: Colors[colorScheme ?? "light"].tint,
           headerShown: useClientOnlyValue(false, true),
-        }}
+          tabBarStyle: { display: "none" }, //Uncomment to hide tab bar
+      }}
       >
         <Tabs.Screen
           name="index"
