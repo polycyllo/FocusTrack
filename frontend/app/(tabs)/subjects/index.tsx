@@ -23,6 +23,7 @@ import {
   deleteSubjectWithSchedules,
   getAllSubjectsWithSchedules,
 } from "@/src/features/subjects/repo";
+import { FORM_ICON_OPTIONS } from "@/src/constants/formStyles";
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
@@ -38,6 +39,7 @@ type SubjectFromDB = {
   title: string;
   description?: string | null;
   color?: string | null;
+  icon?: string | null;
 };
 
 type ScheduleFromDB = {
@@ -322,6 +324,13 @@ function SubjectCard({
         }`
       : undefined;
 
+  // Obtener el ícono correcto desde FORM_ICON_OPTIONS
+  const iconKey = item.subject.icon || "book";
+  const iconNode =
+    FORM_ICON_OPTIONS.find((opt) => opt.key === iconKey)?.node ?? (
+      <Ionicons name="book" size={18} color="#fff" />
+    );
+
   const actions = deleting ? (
     <>
       <Pressable
@@ -389,7 +398,7 @@ function SubjectCard({
         containerProps={{ style: subjectCardStyles.card }}
         overlay={<Animated.View style={fillStyle} />}
         circleColor={item.subject.color || SUBJECT_CARD_COLORS.iconFallback}
-        icon={<Ionicons name="book" size={18} color="#fff" />}
+        icon={iconNode}
         title={item.subject.title || "Sin nombre"}
         subtitle={subtitle}
         actions={actions}

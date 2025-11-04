@@ -7,22 +7,39 @@ export type CreateSubjectInput = {
   title: string;
   description?: string | null;
   color?: string | null;
+  icon?: string | null;
   schedules?: { day: number; start: string; end: string }[];
 };
 
-export async function addSubjectWithSchedules(data: CreateSubjectInput) {
-  // insert subject then insert schedules referencing subjectId
-    // Insert subject and get the last inserted id via SQLite's lastInsertRowid
-    await db.insert(subject).values({
-      title: data.title,
-      description: data.description ?? null,
-      color: data.color ?? null,
-    } as any);
+export async function checkSubjectExists(title: string): Promise<boolean> {
+  const existing = await db
+    .select()
+    .from(subject)
+    .where(eq(subject.title, title.trim()))
+    .limit(1);
+  
+  return existing.length > 0;
+}
 
-    // Drizzle with expo-sqlite doesn't always return an inserted id shape, so
-    // query the last row ordered by primary key descending as a reliable fallback.
-    const rows: any[] = await db.select().from(subject).orderBy(desc(subject.subjectId)).limit(1);
-    const subjectId = rows.length ? rows[0].subjectId || rows[0].subject_id : null;
+export async function addSubjectWithSchedules(data: CreateSubjectInput) {
+  // Verificar si ya existe una materia con el mismo nombre
+  const exists = await checkSubjectExists(data.title);
+  if (exists) {
+    throw new Error("Ya existe una materia con este nombre");
+  }
+
+  // Insert subject and get the last inserted id via SQLite's lastInsertRowid
+  await db.insert(subject).values({
+    title: data.title,
+    description: data.description ?? null,
+    color: data.color ?? null,
+    icon: data.icon ?? null,
+  } as any);
+
+  // Drizzle with expo-sqlite doesn't always return an inserted id shape, so
+  // query the last row ordered by primary key descending as a reliable fallback.
+  const rows: any[] = await db.select().from(subject).orderBy(desc(subject.subjectId)).limit(1);
+  const subjectId = rows.length ? rows[0].subjectId || rows[0].subject_id : null;
 
   if (subjectId && data.schedules && data.schedules.length) {
     const values = data.schedules.map((s) => ({
@@ -32,8 +49,8 @@ export async function addSubjectWithSchedules(data: CreateSubjectInput) {
       status: 1,
       subjectId,
     }));
-      // Drizzle accepts an array of values for batch insert
-      await db.insert(schedule).values(values as any[]);
+    // Drizzle accepts an array of values for batch insert
+    await db.insert(schedule).values(values as any[]);
   }
 
   return subjectId;
@@ -41,10 +58,10 @@ export async function addSubjectWithSchedules(data: CreateSubjectInput) {
 
 export async function getAllSubjectsWithSchedules() {
   // get subjects
-    const subs: any[] = await db.select().from(subject).orderBy(desc(subject.subjectId));
+  const subs: any[] = await db.select().from(subject).orderBy(desc(subject.subjectId));
   const result = await Promise.all(
     subs.map(async (s) => {
-        const sch = await db.select().from(schedule).where(eq(schedule.subjectId, s.subjectId));
+      const sch = await db.select().from(schedule).where(eq(schedule.subjectId, s.subjectId));
       return {
         subject: s,
         schedules: sch,
@@ -87,6 +104,7 @@ export async function updateSubjectWithSchedules(
     title?: string;
     description?: string | null;
     color?: string | null;
+    icon?: string | null;
     schedules?: { day: number; start: string; end: string }[];
   }
 ) {
@@ -97,6 +115,7 @@ export async function updateSubjectWithSchedules(
       ...(data.title && { title: data.title }),
       ...(data.description && { description: data.description }),
       ...(data.color && { color: data.color }),
+      ...(data.icon && { icon: data.icon }),
     })
     .where(eq(subject.subjectId, subjectId));
 
@@ -117,4 +136,3 @@ export async function updateSubjectWithSchedules(
 
   console.log(`Materia ${subjectId} fue actualizada correctamente.`);
 }
-

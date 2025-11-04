@@ -1,4 +1,3 @@
-
 import { sqlite } from './db'
 
 export function ensureSchema() {
@@ -16,6 +15,7 @@ CREATE TABLE IF NOT EXISTS subject (
   title TEXT NOT NULL,
   description TEXT,
   color TEXT,
+  icon TEXT,
   student_id INTEGER
 );
 
@@ -98,7 +98,13 @@ CREATE INDEX IF NOT EXISTS idx_reminder_due ON reminder (status, due_at);
     try {
       sqlite.execSync(`ALTER TABLE task ADD COLUMN ${definition}`)
     } catch (error) {
-      // column already exists
+    }
+  }
+
+  const ensureSubjectColumn = (name: string, definition: string) => {
+    try {
+      sqlite.execSync(`ALTER TABLE subject ADD COLUMN ${definition}`)
+    } catch (error) {
     }
   }
 
@@ -106,4 +112,6 @@ CREATE INDEX IF NOT EXISTS idx_reminder_due ON reminder (status, due_at);
   ensureTaskColumn('icon', 'icon TEXT')
   ensureTaskColumn('created_at', "created_at TEXT DEFAULT (datetime('now'))")
   ensureTaskColumn('completed_at', 'completed_at TEXT')
+  
+  ensureSubjectColumn('icon', 'icon TEXT')
 }

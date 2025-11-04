@@ -124,7 +124,22 @@ export default function SubjectCreateScreen() {
     return null;
   };
 
-  //CAMBIO: Función async para guardar en DB
+  const resetForm = () => {
+    setName("");
+    setSelectedDays({
+      0: false,
+      1: false,
+      2: false,
+      3: false,
+      4: false,
+      5: false,
+      6: false,
+    });
+    setTimes({ 0: {}, 1: {}, 2: {}, 3: {}, 4: {}, 5: {}, 6: {} });
+    setColor(COLOR_SWATCHES[0]);
+    setIcon(ICON_OPTIONS[0].key);
+  };
+
   const onSave = async () => {
     const error = validate();
     if (error) {
@@ -146,19 +161,30 @@ export default function SubjectCreateScreen() {
           };
         });
 
-      // Guardar en la base de datos
+      // Guardar en la base de datos con el ícono incluido
       await addSubjectWithSchedules({
         title: name.trim(),
         description: null,
         color: color,
+        icon: icon, // Ahora se envía el ícono
         schedules: schedules,
       });
 
       Alert.alert("Listo", "Materia creada exitosamente.");
+      
+      // Limpiar formulario antes de volver
+      resetForm();
+      
       router.back();
-    } catch (err) {
+    } catch (err: any) {
       console.error("Error al guardar materia:", err);
-      Alert.alert("Error", "No se pudo guardar la materia.");
+      
+      // Mostrar mensaje específico si es un error de duplicado
+      if (err.message === "Ya existe una materia con este nombre") {
+        Alert.alert("Nombre duplicado", "Ya existe una materia con este nombre. Por favor, elige otro nombre.");
+      } else {
+        Alert.alert("Error", "No se pudo guardar la materia.");
+      }
     }
   };
 
