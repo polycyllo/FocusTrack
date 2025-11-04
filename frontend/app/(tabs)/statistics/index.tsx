@@ -37,21 +37,6 @@ export default function StatisticsScreen() {
     },
   ];
 
-  const pomodoroData = [
-    {
-      label: "Pomodoro en Tareas",
-      value: formatPomodoroTime(stats.pomodoroMinutesTasks),
-      icon: "timer-sand" as const,
-      color: COLORS.primary,
-    },
-    {
-      label: "Pomodoro en Materias",
-      value: formatPomodoroTime(stats.pomodoroMinutesSubjects),
-      icon: "book-open-variant" as const,
-      color: COLORS.card,
-    },
-  ];
-
   return (
     <ScrollView
       style={{ flex: 1, backgroundColor: COLORS.bg }}
@@ -59,7 +44,7 @@ export default function StatisticsScreen() {
     >
       <Text style={styles.title}>Estadísticas</Text>
 
-      {/* las tareas */}
+      {/*tareas */}
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Progreso de Tareas</Text>
         {statCards.map((s, i) => (
@@ -73,18 +58,22 @@ export default function StatisticsScreen() {
         ))}
       </View>
 
-      {/* el pomodoro */}
+      {/*Pomo*/}
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Tiempo en Pomodoro</Text>
-        {pomodoroData.map((p, i) => (
-          <View key={i} style={[styles.card, { borderLeftColor: p.color }]}>
-            <MaterialCommunityIcons name={p.icon} size={30} color={p.color} />
-            <View style={styles.cardTextBox}>
-              <Text style={styles.cardLabel}>{p.label}</Text>
-              <Text style={styles.cardValue}>{p.value}</Text>
-            </View>
+        <Text style={styles.sectionTitle}>Tiempo Total en Pomodoro</Text>
+        <View style={[styles.card, { borderLeftColor: COLORS.card }]}>
+          <MaterialCommunityIcons
+            name="timer-sand"
+            size={30}
+            color={COLORS.card}
+          />
+          <View style={styles.cardTextBox}>
+            <Text style={styles.cardLabel}>Pomodoro General</Text>
+            <Text style={styles.cardValue}>
+              {formatPomodoroTime(stats.pomodoroMinutesTotal)}
+            </Text>
           </View>
-        ))}
+        </View>
       </View>
     </ScrollView>
   );

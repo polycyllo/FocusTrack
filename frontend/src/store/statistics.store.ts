@@ -4,21 +4,17 @@ type Statistics = {
   totalTasks: number;
   pendingTasks: number;
   completedTasks: number;
-  pomodoroMinutesTasks: number;
-  pomodoroMinutesSubjects: number;
+  pomodoroMinutesTotal: number;
 };
 
 interface StatisticsState extends Statistics {
   refresh: () => void;
 }
 
-export const useStatisticsStore = create<StatisticsState>((set) => ({
+export const useStatisticsStore = create<StatisticsState>(() => ({
   totalTasks: 25,
   pendingTasks: 8,
   completedTasks: 17,
-  pomodoroMinutesTasks: 750,
-  pomodoroMinutesSubjects: 3200,
-  refresh: () => {
-    set((state) => ({ ...state }));
-  },
+  pomodoroMinutesTotal: 3950,
+  refresh: () => {},
 }));
