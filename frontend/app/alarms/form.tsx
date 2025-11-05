@@ -60,8 +60,9 @@ export default function AlarmForm() {
     original?.repeatType ?? "daily"
   );
   const [date, setDate] = useState<Date | null>(
-    original?.date ? new Date(original.date) : null
+    original?.date ? new Date(`${original.date}T00:00:00`) : null
   );
+
   const [showDate, setShowDate] = useState(false);
 
   const [time, setTime] = useState<string>(original?.time ?? "08:00");
@@ -113,7 +114,7 @@ export default function AlarmForm() {
     setAlarmType((o.type as any) ?? "subject");
     setRepeatType(o.repeatType ?? "daily");
 
-    setDate(o.date ? new Date(o.date) : null);
+    setDate(o.date ? new Date(`${o.date}T00:00:00`) : null);
     setTime(o.time ?? "08:00");
     setTimes(o.times ?? ["08:00"]);
     setRepeatDays(o.repeatDays ?? []);
@@ -183,10 +184,18 @@ export default function AlarmForm() {
 
         const now = new Date();
 
-        if (scheduled <= now) {
+        const sameDay =
+          scheduled.getFullYear() === now.getFullYear() &&
+          scheduled.getMonth() === now.getMonth() &&
+          scheduled.getDate() === now.getDate();
+
+        if (
+          (sameDay && scheduled.getTime() <= now.getTime()) ||
+          scheduled < now
+        ) {
           setErrors((e) => ({ ...e, date: true, time: true }));
           alert(
-            "No puedes programar una alarma en una fecha u hora pasada. Elige una hora posterior a la actual."
+            "Para hoy, selecciona una hora posterior a la actual. No se permiten fechas u horas pasadas."
           );
           return;
         }
@@ -253,9 +262,13 @@ export default function AlarmForm() {
         date:
           repeatType === "once"
             ? date
-              ? date.toISOString().slice(0, 10)
+              ? `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(
+                  2,
+                  "0"
+                )}-${String(date.getDate()).padStart(2, "0")}`
               : null
             : null,
+
         time: repeatType !== "custom" ? time : null,
         times: repeatType === "custom" && !perDay ? timesToSave ?? null : null,
         repeatDays:
@@ -427,7 +440,14 @@ export default function AlarmForm() {
                 color={COLORS.white}
               />
               <Text style={styles.btnPrimaryText}>
-                {date ? date.toISOString().slice(0, 10) : "Elegir fecha"}
+                {date
+                  ? `${date.getFullYear()}-${String(
+                      date.getMonth() + 1
+                    ).padStart(2, "0")}-${String(date.getDate()).padStart(
+                      2,
+                      "0"
+                    )}`
+                  : "Elegir fecha"}
               </Text>
             </Pressable>
             {errors.date && (
