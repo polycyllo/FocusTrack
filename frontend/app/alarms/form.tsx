@@ -94,6 +94,11 @@ export default function AlarmForm() {
     days: false,
     tone: false,
   });
+  const today = useMemo(() => {
+    const d = new Date();
+    d.setHours(0, 0, 0, 0);
+    return d;
+  }, []);
 
   useEffect(() => {
     bootstrap();
@@ -162,6 +167,31 @@ export default function AlarmForm() {
           alert("Selecciona una hora para la alarma.");
           return;
         }
+
+        const [hoursStr, minutesStr] = time.split(":");
+        const hours = parseInt(hoursStr, 10);
+        const minutes = parseInt(minutesStr, 10);
+
+        if (Number.isNaN(hours) || Number.isNaN(minutes)) {
+          setErrors((e) => ({ ...e, time: true }));
+          alert("La hora seleccionada no es válida.");
+          return;
+        }
+
+        const scheduled = new Date(date);
+        scheduled.setHours(hours, minutes, 0, 0);
+
+        const now = new Date();
+
+        if (scheduled <= now) {
+          setErrors((e) => ({ ...e, date: true, time: true }));
+          alert(
+            "No puedes programar una alarma en una fecha u hora pasada. Elige una hora posterior a la actual."
+          );
+          return;
+        }
+
+        setErrors((e) => ({ ...e, date: false, time: false }));
       }
 
       if (repeatType === "daily" && !time) {
@@ -411,14 +441,19 @@ export default function AlarmForm() {
             {showDate && (
               <DateTimePicker
                 value={date ?? new Date()}
+                minimumDate={today}
                 mode="date"
                 display={Platform.OS === "ios" ? "spinner" : "calendar"}
                 onChange={(_, d) => {
                   setShowDate(false);
-                  if (d) setDate(d);
+                  if (d) {
+                    setDate(d);
+                    setErrors((e) => ({ ...e, date: false }));
+                  }
                 }}
               />
             )}
+
             <Text style={styles.label}>
               Hora <Text style={{ color: COLORS.danger }}>*</Text>
             </Text>
