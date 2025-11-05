@@ -87,6 +87,13 @@ export default function AlarmForm() {
   );
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [errors, setErrors] = useState({
+    title: false,
+    date: false,
+    time: false,
+    days: false,
+    tone: false,
+  });
 
   useEffect(() => {
     bootstrap();
@@ -139,55 +146,43 @@ export default function AlarmForm() {
   const onSave = async () => {
     try {
       if (!title.trim()) {
-      alert("El título no puede estar vacío.");
-      return;
-    }
-
-    if (title.trim().length < 3) {
-      alert("El título debe tener al menos 3 caracteres.");
-      return;
-    }
-
-    if (repeatType === "once") {
-      if (!date) {
-        alert("Selecciona una fecha para la alarma.");
+        setErrors((e) => ({ ...e, title: true }));
+        alert("El título no puede estar vacío.");
         return;
       }
-      if (!time) {
-        alert("Selecciona una hora para la alarma.");
+
+      if (repeatType === "once") {
+        if (!date) {
+          setErrors((e) => ({ ...e, date: true }));
+          alert("Selecciona una fecha para la alarma.");
+          return;
+        }
+        if (!time) {
+          setErrors((e) => ({ ...e, time: true }));
+          alert("Selecciona una hora para la alarma.");
+          return;
+        }
+      }
+
+      if (repeatType === "daily" && !time) {
+        setErrors((e) => ({ ...e, time: true }));
+        alert("Selecciona una hora para la alarma diaria.");
         return;
       }
-      if (date < new Date()) {
-        alert("No puedes programar una alarma en una fecha pasada.");
+
+      if (repeatType === "custom") {
+        if (!repeatDays || repeatDays.length === 0) {
+          setErrors((e) => ({ ...e, days: true }));
+          alert("Selecciona al menos un día para la alarma personalizada.");
+          return;
+        }
+      }
+
+      if (!tone) {
+        setErrors((e) => ({ ...e, tone: true }));
+        alert("Selecciona un tono para la alarma.");
         return;
       }
-    }
-
-    if (repeatType === "daily" && !time) {
-      alert("Selecciona una hora para la alarma diaria.");
-      return;
-    }
-
-    if (repeatType === "custom") {
-      if (!repeatDays || repeatDays.length === 0) {
-        alert("Selecciona al menos un día para la alarma personalizada.");
-        return;
-      }
-      if (!perDay && (!times || times.length === 0)) {
-        alert("Selecciona al menos una hora para los días seleccionados.");
-        return;
-      }
-    }
-
-    if (!tone) {
-      alert("Selecciona un tono para la alarma.");
-      return;
-    }
-
-    if (alarmType === "task" && repeatType === "daily") {
-      alert("Las tareas no pueden repetirse diariamente.");
-      return;
-    }
 
       setSaving(true);
       const prevCustomByDay = (original as any)?.customByDay ?? null;
@@ -356,13 +351,30 @@ export default function AlarmForm() {
       <View style={styles.block}>
         <Text style={styles.blockTitle}>Categoría</Text>
         <CategorySelector />
-        <Text style={styles.label}>Título</Text>
+        <Text style={styles.label}>
+          Título <Text style={{ color: COLORS.danger }}>*</Text>
+        </Text>
         <TextInput
           value={title}
-          onChangeText={setTitle}
+          onChangeText={(text) => {
+            setTitle(text);
+            if (text.trim().length > 0) {
+              setErrors((e) => ({ ...e, title: false }));
+            }
+          }}
+          onBlur={() => {
+            if (!title.trim()) {
+              setErrors((e) => ({ ...e, title: true }));
+            }
+          }}
           placeholder="Título de la alarma"
-          style={styles.input}
+          style={[styles.input, errors.title && styles.inputError]}
         />
+        {errors.title && (
+          <Text style={{ color: COLORS.danger, marginTop: 4, fontSize: 12 }}>
+            Este campo es obligatorio.
+          </Text>
+        )}
       </View>
 
       {/* Bloque 2: Repetición */}
@@ -372,7 +384,9 @@ export default function AlarmForm() {
 
         {repeatType === "once" && (
           <>
-            <Text style={styles.label}>Fecha</Text>
+            <Text style={styles.label}>
+              Fecha <Text style={{ color: COLORS.danger }}>*</Text>
+            </Text>
             <Pressable
               onPress={() => setShowDate(true)}
               style={styles.btnPrimary}
@@ -386,6 +400,14 @@ export default function AlarmForm() {
                 {date ? date.toISOString().slice(0, 10) : "Elegir fecha"}
               </Text>
             </Pressable>
+            {errors.date && (
+              <Text
+                style={{ color: COLORS.danger, fontSize: 12, marginTop: 4 }}
+              >
+                Selecciona una fecha válida.
+              </Text>
+            )}
+
             {showDate && (
               <DateTimePicker
                 value={date ?? new Date()}
@@ -397,8 +419,23 @@ export default function AlarmForm() {
                 }}
               />
             )}
-            <Text style={styles.label}>Hora</Text>
-            <TimeRow value={time} onChange={setTime} />
+            <Text style={styles.label}>
+              Hora <Text style={{ color: COLORS.danger }}>*</Text>
+            </Text>
+            <TimeRow
+              value={time}
+              onChange={(t) => {
+                setTime(t);
+                if (t) setErrors((e) => ({ ...e, time: false }));
+              }}
+            />
+            {errors.time && (
+              <Text
+                style={{ color: COLORS.danger, fontSize: 12, marginTop: 4 }}
+              >
+                Selecciona una hora válida.
+              </Text>
+            )}
           </>
         )}
 
@@ -413,8 +450,23 @@ export default function AlarmForm() {
           <>
             <PerDayToggle />
 
-            <Text style={styles.label}>Días</Text>
-            <DaySelector selected={repeatDays} onChange={setRepeatDays} />
+            <Text style={styles.label}>
+              Días <Text style={{ color: COLORS.danger }}>*</Text>
+            </Text>
+            <DaySelector
+              selected={repeatDays}
+              onChange={(days) => {
+                setRepeatDays(days);
+                if (days.length > 0) setErrors((e) => ({ ...e, days: false }));
+              }}
+            />
+            {errors.days && (
+              <Text
+                style={{ color: COLORS.danger, fontSize: 12, marginTop: 4 }}
+              >
+                Selecciona al menos un día.
+              </Text>
+            )}
 
             {!perDay && (
               <>
@@ -431,8 +483,21 @@ export default function AlarmForm() {
       {/* Bloque 3: Notificación */}
       <View style={styles.block}>
         <Text style={styles.blockTitle}>Notificación</Text>
-        <Text style={styles.label}>Tono</Text>
-        <TonePicker value={tone} onChange={setTone} />
+        <Text style={styles.label}>
+          Tono <Text style={{ color: COLORS.danger }}>*</Text>
+        </Text>
+        <TonePicker
+          value={tone}
+          onChange={(t) => {
+            setTone(t);
+            if (t) setErrors((e) => ({ ...e, tone: false }));
+          }}
+        />
+        {errors.tone && (
+          <Text style={{ color: COLORS.danger, fontSize: 12, marginTop: 4 }}>
+            Selecciona un tono.
+          </Text>
+        )}
 
         <Text style={[styles.label, { marginTop: 12 }]}>Vibración</Text>
         <View style={styles.chipRow}>
@@ -526,6 +591,9 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     borderWidth: 1,
     borderColor: COLORS.border,
+  },
+  inputError: {
+    borderColor: COLORS.danger,
   },
 
   chipRow: { flexDirection: "row", flexWrap: "wrap", gap: 8, marginBottom: 6 },
@@ -629,4 +697,4 @@ const styles = StyleSheet.create({
   daySub: { color: COLORS.dark, opacity: 0.7, fontSize: 12 },
 });
 
-//this file must be refactored 
+//this file must be refactored
