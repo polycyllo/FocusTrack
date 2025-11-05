@@ -57,7 +57,6 @@ type PickerState =
 export default function SubjectCreateScreen() {
   const router = useRouter();
 
-  // form state
   const [name, setName] = useState("");
   const [selectedDays, setSelectedDays] = useState<Record<DayIndex, boolean>>({
     0: false,
@@ -75,7 +74,18 @@ export default function SubjectCreateScreen() {
   const [color, setColor] = useState(COLOR_SWATCHES[0]);
   const [icon, setIcon] = useState(ICON_OPTIONS[0].key);
 
-  // time picker modal
+  const [nameError, setNameError] = useState(false);
+  const [daysError, setDaysError] = useState(false);
+  const [timeErrors, setTimeErrors] = useState<Record<DayIndex, boolean>>({
+    0: false,
+    1: false,
+    2: false,
+    3: false,
+    4: false,
+    5: false,
+    6: false,
+  });
+
   const [picker, setPicker] = useState<PickerState>({ open: false });
 
   const anyDaySelected = useMemo(
@@ -83,7 +93,6 @@ export default function SubjectCreateScreen() {
     [selectedDays]
   );
 
-  // handlers
   const toggleDay = (d: DayIndex) =>
     setSelectedDays((prev) => ({ ...prev, [d]: !prev[d] }));
 
@@ -98,6 +107,9 @@ export default function SubjectCreateScreen() {
         ...prev,
         [day]: { ...prev[day], [kind]: date },
       }));
+      if (timeErrors[day]) {
+        setTimeErrors((prev) => ({ ...prev, [day]: false }));
+      }
     }
     setPicker({ open: false });
   };
@@ -106,23 +118,6 @@ export default function SubjectCreateScreen() {
     d
       ? d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
       : "--:--";
-
-  const validate = () => {
-    if (!name.trim()) return "El nombre es obligatorio.";
-    if (!anyDaySelected) return "Selecciona al menos un día.";
-    for (let di = 0 as DayIndex; di <= 6; di = (di + 1) as DayIndex) {
-      if (selectedDays[di]) {
-        const t = times[di];
-        if (!t.start || !t.end) {
-          return `Faltan horas para ${NICE_DAY[di]}.`;
-        }
-        if (t.start && t.end && t.end <= t.start) {
-          return `La hora de fin debe ser mayor que la de inicio para ${NICE_DAY[di]}.`;
-        }
-      }
-    }
-    return null;
-  };
 
   const resetForm = () => {
     setName("");
@@ -138,6 +133,74 @@ export default function SubjectCreateScreen() {
     setTimes({ 0: {}, 1: {}, 2: {}, 3: {}, 4: {}, 5: {}, 6: {} });
     setColor(COLOR_SWATCHES[0]);
     setIcon(ICON_OPTIONS[0].key);
+    setNameError(false);
+    setDaysError(false);
+    setTimeErrors({
+      0: false,
+      1: false,
+      2: false,
+      3: false,
+      4: false,
+      5: false,
+      6: false,
+    });
+  };
+
+  const validate = () => {
+    let hasError = false;
+
+    setNameError(false);
+    setDaysError(false);
+    setTimeErrors({
+      0: false,
+      1: false,
+      2: false,
+      3: false,
+      4: false,
+      5: false,
+      6: false,
+    });
+
+    if (!name.trim()) {
+      setNameError(true);
+      hasError = true;
+    }
+
+    if (!anyDaySelected) {
+      setDaysError(true);
+      hasError = true;
+    }
+
+    const newTimeErrors: Record<DayIndex, boolean> = {
+      0: false,
+      1: false,
+      2: false,
+      3: false,
+      4: false,
+      5: false,
+      6: false,
+    };
+
+    for (let di = 0 as DayIndex; di <= 6; di = (di + 1) as DayIndex) {
+      if (selectedDays[di]) {
+        const t = times[di];
+        if (!t.start || !t.end) {
+          newTimeErrors[di] = true;
+          hasError = true;
+        } else if (t.start && t.end && t.end <= t.start) {
+          newTimeErrors[di] = true;
+          hasError = true;
+        }
+      }
+    }
+
+    setTimeErrors(newTimeErrors);
+
+    if (hasError) {
+      return "Por favor completa todos los campos obligatorios correctamente.";
+    }
+
+    return null;
   };
 
   const onSave = async () => {
@@ -148,7 +211,6 @@ export default function SubjectCreateScreen() {
     }
 
     try {
-      // Preparar schedules
       const schedules = Object.entries(selectedDays)
         .filter(([_, isOn]) => isOn)
         .map(([key]) => {
@@ -161,27 +223,25 @@ export default function SubjectCreateScreen() {
           };
         });
 
-      // Guardar en la base de datos con el ícono incluido
       await addSubjectWithSchedules({
         title: name.trim(),
         description: null,
         color: color,
-        icon: icon, // Ahora se envía el ícono
+        icon: icon,
         schedules: schedules,
       });
 
       Alert.alert("Listo", "Materia creada exitosamente.");
-      
-      // Limpiar formulario antes de volver
       resetForm();
-      
       router.back();
     } catch (err: any) {
       console.error("Error al guardar materia:", err);
-      
-      // Mostrar mensaje específico si es un error de duplicado
+
       if (err.message === "Ya existe una materia con este nombre") {
-        Alert.alert("Nombre duplicado", "Ya existe una materia con este nombre. Por favor, elige otro nombre.");
+        Alert.alert(
+          "Nombre duplicado",
+          "Ya existe una materia con este nombre. Por favor, elige otro nombre."
+        );
       } else {
         Alert.alert("Error", "No se pudo guardar la materia.");
       }
@@ -206,28 +266,39 @@ export default function SubjectCreateScreen() {
         contentContainerStyle={styles.content}
         keyboardShouldPersistTaps="handled"
       >
-        {/* Nombre */}
         <View style={styles.section}>
-          <Text style={styles.label}>Nombre</Text>
+          <View style={styles.labelRow}>
+            <Text style={styles.label}>Nombre *</Text>
+            {/* <Text style={styles.required}>*</Text> */}
+          </View>
           <TextInput
             value={name}
-            onChangeText={setName}
+            onChangeText={(text) => {
+              setName(text);
+              if (nameError && text.trim()) setNameError(false);
+            }}
             placeholder="Nombre de la materia"
             placeholderTextColor="rgba(0,0,0,0.4)"
-            style={styles.input}
+            style={[styles.input, nameError && styles.inputError]}
           />
+          {nameError && <Text style={styles.errorText}>Campo obligatorio</Text>}
         </View>
 
-        {/* Días */}
         <View style={styles.section}>
-          <Text style={styles.label}>Días</Text>
-          <View style={styles.daysRow}>
+          <View style={styles.labelRow}>
+            <Text style={styles.label}>Días *</Text>
+            {/* <Text style={styles.required}>*</Text> */}
+          </View>
+          <View style={[styles.daysRow, daysError && styles.daysRowError]}>
             {(Object.keys(DAY_LABELS) as unknown as DayIndex[]).map((di) => {
               const active = selectedDays[di];
               return (
                 <Pressable
                   key={di}
-                  onPress={() => toggleDay(di)}
+                  onPress={() => {
+                    toggleDay(di);
+                    if (daysError) setDaysError(false);
+                  }}
                   style={[
                     styles.dayChip,
                     active ? styles.dayChipOn : styles.dayChipOff,
@@ -242,9 +313,11 @@ export default function SubjectCreateScreen() {
               );
             })}
           </View>
+          {daysError && (
+            <Text style={styles.errorText}>Selecciona al menos un día</Text>
+          )}
         </View>
 
-        {/* Horas por día seleccionado */}
         {anyDaySelected && (
           <View style={styles.section}>
             <Text style={styles.label}>Horas</Text>
@@ -254,31 +327,59 @@ export default function SubjectCreateScreen() {
               ) as DayIndex[]
             ).map((di) => {
               const t = times[di];
+              const hasError = timeErrors[di];
               return (
-                <View key={`t-${di}`} style={styles.timeRow}>
-                  <Text style={styles.timeRowDay}>{NICE_DAY[di]}</Text>
+                <View key={`t-${di}`}>
+                  <View
+                    style={[styles.timeRow, hasError && styles.timeRowError]}
+                  >
+                    <Text style={styles.timeRowDay}>{NICE_DAY[di]}</Text>
 
-                  <View style={styles.timeButtons}>
-                    <Pressable
-                      onPress={() => openPicker(di, "start")}
-                      style={styles.timeBtn}
-                    >
-                      <Ionicons name="time" size={16} color="#333" />
-                      <Text style={styles.timeBtnText}>
-                        {formatTime(t.start)}
-                      </Text>
-                    </Pressable>
+                    <View style={styles.timeButtons}>
+                      <Pressable
+                        onPress={() => openPicker(di, "start")}
+                        style={[styles.timeBtn, hasError && styles.timeBtnError]}
+                      >
+                        <Ionicons
+                          name="time"
+                          size={16}
+                          color={hasError ? "#E53935" : "#333"}
+                        />
+                        <Text
+                          style={[
+                            styles.timeBtnText,
+                            hasError && styles.timeBtnTextError,
+                          ]}
+                        >
+                          {formatTime(t.start)}
+                        </Text>
+                      </Pressable>
 
-                    <Pressable
-                      onPress={() => openPicker(di, "end")}
-                      style={styles.timeBtn}
-                    >
-                      <Ionicons name="time" size={16} color="#333" />
-                      <Text style={styles.timeBtnText}>
-                        {formatTime(t.end)}
-                      </Text>
-                    </Pressable>
+                      <Pressable
+                        onPress={() => openPicker(di, "end")}
+                        style={[styles.timeBtn, hasError && styles.timeBtnError]}
+                      >
+                        <Ionicons
+                          name="time"
+                          size={16}
+                          color={hasError ? "#E53935" : "#333"}
+                        />
+                        <Text
+                          style={[
+                            styles.timeBtnText,
+                            hasError && styles.timeBtnTextError,
+                          ]}
+                        >
+                          {formatTime(t.end)}
+                        </Text>
+                      </Pressable>
+                    </View>
                   </View>
+                  {hasError && (
+                    <Text style={styles.errorText}>
+                      Completa las horas correctamente
+                    </Text>
+                  )}
                 </View>
               );
             })}
@@ -292,7 +393,6 @@ export default function SubjectCreateScreen() {
           onIconChange={setIcon}
         />
 
-        {/* Botones */}
         <View style={styles.footerBtns}>
           <Pressable
             onPress={() => router.back()}
@@ -318,7 +418,6 @@ export default function SubjectCreateScreen() {
         </View>
       </ScrollView>
 
-      {/* Time Picker (nativo) */}
       {picker.open && (
         <DateTimePicker
           value={new Date()}
@@ -361,7 +460,17 @@ const styles = StyleSheet.create({
     borderColor: COLORS.border,
     gap: 10,
   },
+  labelRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+  },
   label: { fontSize: 14, fontWeight: "700", color: COLORS.text },
+  required: {
+    fontSize: 14,
+    fontWeight: "700",
+    color: "#E53935",
+  },
   input: {
     backgroundColor: "#fff",
     borderRadius: 12,
@@ -371,11 +480,28 @@ const styles = StyleSheet.create({
     borderColor: COLORS.border,
     color: COLORS.text,
   },
+  inputError: {
+    borderColor: "#E53935",
+    borderWidth: 2,
+  },
+  errorText: {
+    color: "#E53935",
+    fontSize: 12,
+    fontWeight: "600",
+    marginTop: 4,
+  },
 
   daysRow: {
     flexDirection: "row",
     gap: 8,
     flexWrap: "wrap",
+  },
+  daysRowError: {
+    padding: 8,
+    backgroundColor: "rgba(229, 57, 53, 0.1)",
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: "#E53935",
   },
   dayChip: {
     width: 38,
@@ -394,6 +520,12 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     paddingVertical: 6,
   },
+  timeRowError: {
+    backgroundColor: "rgba(229, 57, 53, 0.05)",
+    padding: 8,
+    borderRadius: 8,
+    marginVertical: 4,
+  },
   timeRowDay: { fontWeight: "600", color: COLORS.text },
   timeButtons: { flexDirection: "row", gap: 10 },
   timeBtn: {
@@ -409,7 +541,12 @@ const styles = StyleSheet.create({
     minWidth: 90,
     justifyContent: "center",
   },
+  timeBtnError: {
+    borderColor: "#E53935",
+    borderWidth: 2,
+  },
   timeBtnText: { color: "#333", fontWeight: "600" },
+  timeBtnTextError: { color: "#E53935" },
 
   footerBtns: { flexDirection: "row", gap: 12, marginBottom: 20 },
   btn: {
