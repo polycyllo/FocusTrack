@@ -15,6 +15,6 @@ export const useStatisticsStore = create<StatisticsState>(() => ({
   totalTasks: 25,
   pendingTasks: 8,
   completedTasks: 17,
-  pomodoroMinutesTotal: 3950,
+  pomodoroMinutesTotal: 1570,
   refresh: () => {},
 }));
