@@ -7,6 +7,7 @@ import {
   View,
   StyleSheet,
   FlatList,
+  Modal, 
 } from "react-native";
 import { useRouter, Href, useFocusEffect } from "expo-router";
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
@@ -77,6 +78,7 @@ const COLORS = {
   cardText: "#ffffff",
   chipBg: "rgba(255,255,255,0.18)",
   chipBorder: "rgba(255,255,255,0.28)",
+  text: "#0A0A0A",
 };
 
 export default function SubjectsScreen() {
@@ -87,6 +89,12 @@ export default function SubjectsScreen() {
   >([]);
   const [loading, setLoading] = useState(true);
   const [profileModalVisible, setProfileModalVisible] = useState(false);
+
+  // ESTADO FILTROS
+  const [filterModalVisible, setFilterModalVisible] = useState(false);
+  const [selectedFilter, setSelectedFilter] = useState<
+    "todos" | "a-z" | "z-a" | "recientes" | "dia"
+  >("todos");
 
   const loadSubjects = async () => {
     try {
@@ -168,6 +176,17 @@ export default function SubjectsScreen() {
               <Text style={styles.createBtnText}>+ Crear</Text>
             </Pressable>
 
+            {/* botón filtros */}
+            <Pressable
+              onPress={() => setFilterModalVisible(true)}
+              style={({ pressed }) => [
+                styles.filterBtn,
+                pressed && { opacity: 0.85 },
+              ]}
+            >
+              <MaterialCommunityIcons name="filter-variant" size={20} color="#fff" />
+            </Pressable>
+
             <Pressable
               onPress={handleUserIconPress}
               style={({ pressed }) => [
@@ -197,8 +216,7 @@ export default function SubjectsScreen() {
             contentContainerStyle={{ padding: 12, paddingBottom: 20 }}
             data={subjects}
             keyExtractor={(item) =>
-              (item.subject.subjectId || item.subject.subject_id)?.toString() ||
-              ""
+              (item.subject.subjectId || item.subject.subject_id)?.toString() || ""
             }
             renderItem={({ item }) => (
               <SubjectCard item={item} onDeleted={loadSubjects} />
@@ -214,6 +232,153 @@ export default function SubjectsScreen() {
         onStatistics={handleStatistics}
         onAlarms={handleAlarms}
       />
+
+      {/* Modal de filtros */}
+      <Modal
+        visible={filterModalVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setFilterModalVisible(false)}
+      >
+        <Pressable
+          style={styles.modalOverlay}
+          onPress={() => setFilterModalVisible(false)}
+        >
+          <View style={styles.filterModal}>
+            <Text style={styles.filterModalTitle}>Ordenar por</Text>
+
+            <Pressable
+              style={[
+                styles.filterOption,
+                selectedFilter === "todos" && styles.filterOptionActive,
+              ]}
+              onPress={() => {
+                setSelectedFilter("todos");
+                // coloquen aqui la logica para la funcionalidad
+                setFilterModalVisible(false);
+              }}
+            >
+              <MaterialCommunityIcons
+                name="format-list-bulleted"
+                size={22}
+                color={selectedFilter === "todos" ? COLORS.header : COLORS.text}
+              />
+              <Text
+                style={[
+                  styles.filterOptionText,
+                  selectedFilter === "todos" && styles.filterOptionTextActive,
+                ]}
+              >
+                Todos
+              </Text>
+            </Pressable>
+
+            <Pressable
+              style={[
+                styles.filterOption,
+                selectedFilter === "a-z" && styles.filterOptionActive,
+              ]}
+              onPress={() => {
+                setSelectedFilter("a-z");
+                // coloquen aqui la logica para la funcionalidad
+                setFilterModalVisible(false);
+              }}
+            >
+              <MaterialCommunityIcons
+                name="sort-alphabetical-ascending"
+                size={22}
+                color={selectedFilter === "a-z" ? COLORS.header : COLORS.text}
+              />
+              <Text
+                style={[
+                  styles.filterOptionText,
+                  selectedFilter === "a-z" && styles.filterOptionTextActive,
+                ]}
+              >
+                A a la Z
+              </Text>
+            </Pressable>
+
+            <Pressable
+              style={[
+                styles.filterOption,
+                selectedFilter === "z-a" && styles.filterOptionActive,
+              ]}
+              onPress={() => {
+                setSelectedFilter("z-a");
+                // coloquen aqui la logica para la funcionalidad
+                setFilterModalVisible(false);
+              }}
+            >
+              <MaterialCommunityIcons
+                name="sort-alphabetical-descending"
+                size={22}
+                color={selectedFilter === "z-a" ? COLORS.header : COLORS.text}
+              />
+              <Text
+                style={[
+                  styles.filterOptionText,
+                  selectedFilter === "z-a" && styles.filterOptionTextActive,
+                ]}
+              >
+                Z a la A
+              </Text>
+            </Pressable>
+
+            <Pressable
+              style={[
+                styles.filterOption,
+                selectedFilter === "recientes" && styles.filterOptionActive,
+              ]}
+              onPress={() => {
+                setSelectedFilter("recientes");
+                // coloquen aqui la logica para la funcionalidad
+                setFilterModalVisible(false);
+              }}
+            >
+              <MaterialCommunityIcons
+                name="clock-outline"
+                size={22}
+                color={selectedFilter === "recientes" ? COLORS.header : COLORS.text}
+              />
+              <Text
+                style={[
+                  styles.filterOptionText,
+                  selectedFilter === "recientes" && styles.filterOptionTextActive,
+                ]}
+              >
+                Más recientes
+              </Text>
+            </Pressable>
+
+            <Pressable
+              style={[
+                styles.filterOption,
+                selectedFilter === "dia" && styles.filterOptionActive,
+              ]}
+              onPress={() => {
+                setSelectedFilter("dia");
+                // coloquen aqui la logica para la funcionalidad
+                setFilterModalVisible(false);
+              }}
+            >
+              <MaterialCommunityIcons
+                name="calendar-today"
+                size={22}
+                color={selectedFilter === "dia" ? COLORS.header : COLORS.text}
+              />
+              <Text
+                style={[
+                  styles.filterOptionText,
+                  selectedFilter === "dia" && styles.filterOptionTextActive,
+                ]}
+              >
+                Por día
+              </Text>
+            </Pressable>
+          </View>
+        </Pressable>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -322,12 +487,9 @@ function SubjectCard({
 
   const subtitle =
     item.schedules && item.schedules.length > 0
-      ? `${item.schedules.length} horario${
-          item.schedules.length !== 1 ? "s" : ""
-        }`
+      ? `${item.schedules.length} horario${item.schedules.length !== 1 ? "s" : ""}`
       : undefined;
 
-  // Obtener el ícono correcto desde FORM_ICON_OPTIONS
   const iconKey = item.subject.icon || "book";
   const iconNode =
     FORM_ICON_OPTIONS.find((opt) => opt.key === iconKey)?.node ?? (
@@ -344,11 +506,7 @@ function SubjectCard({
         ]}
         onPress={confirmDelete}
       >
-        <MaterialCommunityIcons
-          name="trash-can-outline"
-          size={18}
-          color="#fff"
-        />
+        <MaterialCommunityIcons name="trash-can-outline" size={18} color="#fff" />
       </Pressable>
 
       <Pressable
@@ -359,11 +517,7 @@ function SubjectCard({
         ]}
         onPress={cancelDelete}
       >
-        <MaterialCommunityIcons
-          name="close-circle-outline"
-          size={18}
-          color="#fff"
-        />
+        <MaterialCommunityIcons name="close-circle-outline" size={18} color="#fff" />
       </Pressable>
     </>
   ) : (
@@ -373,11 +527,7 @@ function SubjectCard({
         style={subjectCardStyles.actionBtn}
         onPress={openPomodoroConfig}
       >
-        <MaterialCommunityIcons
-          name="timer-plus-outline"
-          size={18}
-          color="#fff"
-        />
+        <MaterialCommunityIcons name="timer-plus-outline" size={18} color="#fff" />
       </Pressable>
 
       <Pressable
@@ -462,5 +612,63 @@ const styles = StyleSheet.create({
     fontSize: 14,
     marginTop: 8,
     textAlign: "center",
+  },
+
+  // FILTER STYLES
+  filterBtn: {
+    backgroundColor: COLORS.button,
+    borderColor: COLORS.button,
+    borderWidth: 1,
+    padding: 8,
+    borderRadius: 10,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.5)",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  filterModal: {
+    backgroundColor: "#fff",
+    borderRadius: 16,
+    padding: 20,
+    width: "85%",
+    maxWidth: 400,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
+    elevation: 5,
+  },
+  filterModalTitle: {
+    fontSize: 18,
+    fontWeight: "700",
+    color: COLORS.text,
+    marginBottom: 16,
+    textAlign: "center",
+  },
+  filterOption: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    borderRadius: 10,
+    marginBottom: 8,
+    backgroundColor: "#F5F5F5",
+    gap: 12,
+  },
+  filterOptionActive: {
+    backgroundColor: "#E3F2FD",
+    borderWidth: 2,
+    borderColor: COLORS.header,
+  },
+  filterOptionText: {
+    fontSize: 16,
+    fontWeight: "600",
+    color: COLORS.text,
+  },
+  filterOptionTextActive: {
+    color: COLORS.header,
+    fontWeight: "700",
   },
 });
