@@ -611,7 +611,7 @@ export default function AlarmForm() {
                 onPress={() => setConfirmCancel(false)}
                 style={[styles.modalBtn, { backgroundColor: COLORS.primary }]}
               >
-                <Text style={styles.modalBtnText}>Seguir editando</Text>
+                <Text style={styles.modalBtnText}>Seguir</Text>
               </Pressable>
 
               <Pressable
@@ -763,10 +763,9 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.white,
   },
   knobOn: {
-    marginLeft: 48 - 22 - 3, // ancho - knob - padding
+    marginLeft: 48 - 22 - 3,
   },
 
-  // Editor por día
   dayCard: {
     borderWidth: 1,
     borderColor: COLORS.border,
@@ -788,11 +787,11 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: "rgba(0,0,0,0.5)",
     alignItems: "center",
     justifyContent: "center",
     zIndex: 50,
   },
+
   modalBox: {
     width: "80%",
     backgroundColor: COLORS.white,
@@ -833,5 +832,3 @@ const styles = StyleSheet.create({
     fontWeight: "700",
   },
 });
-
-//this file must be refactored

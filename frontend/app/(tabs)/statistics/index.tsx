@@ -60,8 +60,6 @@ export default function StatisticsScreen() {
         style={{ flex: 1, backgroundColor: COLORS.bg }}
         contentContainerStyle={{ padding: 20 }}
       >
-        <Text style={styles.title}>Estadísticas</Text>
-
         {/*tareas */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Progreso de Tareas</Text>

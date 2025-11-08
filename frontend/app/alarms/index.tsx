@@ -133,15 +133,24 @@ export default function AlarmHome() {
   };
   const renderHeaderBar = () => (
     <View style={styles.topHeader}>
+      <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
+        <Pressable
+          onPress={() => router.back()}
+          hitSlop={8}
+          style={styles.backBtn}
+        >
+          <MaterialCommunityIcons name="arrow-left" size={22} color="#fff" />
+        </Pressable>
+        <Text style={styles.headerTitle}>Mis Alarmas</Text>
+      </View>
+
       <Pressable
-        onPress={() => router.back()}
-        hitSlop={8}
-        style={styles.backBtn}
+        onPress={() => router.push("/alarms/form")}
+        style={styles.createBtnHeader}
       >
-        <MaterialCommunityIcons name="arrow-left" size={22} color="#fff" />
+        <MaterialCommunityIcons name="plus" size={16} color="#fff" />
+        <Text style={styles.createText}>Crear</Text>
       </Pressable>
-      <Text style={styles.headerTitle}>Mis Alarmas</Text>
-      <View style={{ width: 22 }} />
     </View>
   );
 
@@ -157,22 +166,6 @@ export default function AlarmHome() {
           paddingHorizontal: 16,
           paddingTop: 40,
         }}
-        ListHeaderComponent={
-          <View style={styles.header}>
-            <Text style={styles.title}>Mis alarmas</Text>
-            <Pressable
-              onPress={() => router.push("/alarms/form")}
-              style={styles.createBtn}
-            >
-              <MaterialCommunityIcons
-                name="plus"
-                size={16}
-                color={COLORS.white}
-              />
-              <Text style={styles.createText}>Crear alarma</Text>
-            </Pressable>
-          </View>
-        }
         renderItem={({ item: s }) => {
           const expanded = open[s.key];
           const data = listByType(s.key) || [];
@@ -273,6 +266,15 @@ const styles = StyleSheet.create({
     color: "#fff",
     fontSize: 18,
     fontWeight: "700",
+  },
+  createBtnHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    backgroundColor: "rgba(255,255,255,0.2)",
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 8,
   },
 
   container: {
