@@ -88,6 +88,8 @@ export default function AlarmForm() {
   );
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [confirmCancel, setConfirmCancel] = useState(false);
+
   const [errors, setErrors] = useState({
     title: false,
     date: false,
@@ -582,11 +584,12 @@ export default function AlarmForm() {
       {/* Botones */}
       <View style={styles.btnRow}>
         <Pressable
-          onPress={() => router.back()}
+          onPress={() => setConfirmCancel(true)}
           style={[styles.actionBtn, { backgroundColor: COLORS.danger }]}
         >
           <Text style={styles.actionText}>Cancelar</Text>
         </Pressable>
+
         <Pressable
           disabled={saving}
           onPress={onSave}
@@ -595,6 +598,35 @@ export default function AlarmForm() {
           <Text style={styles.actionText}>{editing ? "Guardar" : "Crear"}</Text>
         </Pressable>
       </View>
+      {confirmCancel && (
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalBox}>
+            <Text style={styles.modalTitle}>¿Salir sin guardar?</Text>
+            <Text style={styles.modalText}>
+              Los cambios realizados no se guardarán.
+            </Text>
+
+            <View style={styles.modalBtnRow}>
+              <Pressable
+                onPress={() => setConfirmCancel(false)}
+                style={[styles.modalBtn, { backgroundColor: COLORS.primary }]}
+              >
+                <Text style={styles.modalBtnText}>Seguir editando</Text>
+              </Pressable>
+
+              <Pressable
+                onPress={() => {
+                  setConfirmCancel(false);
+                  router.back();
+                }}
+                style={[styles.modalBtn, { backgroundColor: COLORS.danger }]}
+              >
+                <Text style={styles.modalBtnText}>Salir</Text>
+              </Pressable>
+            </View>
+          </View>
+        </View>
+      )}
 
       <SaveToast visible={saved} />
     </ScrollView>
@@ -750,6 +782,56 @@ const styles = StyleSheet.create({
   },
   dayTitle: { fontWeight: "800", color: COLORS.primaryDark, fontSize: 14 },
   daySub: { color: COLORS.dark, opacity: 0.7, fontSize: 12 },
+  modalOverlay: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: "rgba(0,0,0,0.5)",
+    alignItems: "center",
+    justifyContent: "center",
+    zIndex: 50,
+  },
+  modalBox: {
+    width: "80%",
+    backgroundColor: COLORS.white,
+    borderRadius: 16,
+    padding: 20,
+    shadowColor: "#000",
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 6,
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: "800",
+    color: COLORS.primaryDark,
+    textAlign: "center",
+    marginBottom: 8,
+  },
+  modalText: {
+    fontSize: 14,
+    color: COLORS.dark,
+    opacity: 0.8,
+    textAlign: "center",
+    marginBottom: 20,
+  },
+  modalBtnRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    gap: 10,
+  },
+  modalBtn: {
+    flex: 1,
+    borderRadius: 10,
+    paddingVertical: 10,
+    alignItems: "center",
+  },
+  modalBtnText: {
+    color: "#fff",
+    fontWeight: "700",
+  },
 });
 
 //this file must be refactored

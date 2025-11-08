@@ -1,8 +1,9 @@
 import React from "react";
-import { View, Text, StyleSheet, ScrollView } from "react-native";
+import { View, Text, StyleSheet, ScrollView, Pressable } from "react-native";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { useStatisticsStore } from "../../../src/store/statistics.store";
 import { formatPomodoroTime } from "../../../src/utils/timeFormatter";
+import { useRouter } from "expo-router";
 
 const COLORS = {
   bg: "#D4F3EE",
@@ -36,50 +37,86 @@ export default function StatisticsScreen() {
       color: "#27AE60",
     },
   ];
+  const router = useRouter();
+
+  const renderHeaderBar = () => (
+    <View style={styles.topHeader}>
+      <Pressable
+        onPress={() => router.back()}
+        hitSlop={8}
+        style={styles.backBtn}
+      >
+        <MaterialCommunityIcons name="arrow-left" size={22} color="#fff" />
+      </Pressable>
+      <Text style={styles.headerTitle}>Estadísticas</Text>
+      <View style={{ width: 22 }} />
+    </View>
+  );
 
   return (
-    <ScrollView
-      style={{ flex: 1, backgroundColor: COLORS.bg }}
-      contentContainerStyle={{ padding: 20 }}
-    >
-      <Text style={styles.title}>Estadísticas</Text>
+    <>
+      {renderHeaderBar()}
+      <ScrollView
+        style={{ flex: 1, backgroundColor: COLORS.bg }}
+        contentContainerStyle={{ padding: 20 }}
+      >
+        <Text style={styles.title}>Estadísticas</Text>
 
-      {/*tareas */}
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Progreso de Tareas</Text>
-        {statCards.map((s, i) => (
-          <View key={i} style={[styles.card, { borderLeftColor: s.color }]}>
-            <MaterialCommunityIcons name={s.icon} size={30} color={s.color} />
+        {/*tareas */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Progreso de Tareas</Text>
+          {statCards.map((s, i) => (
+            <View key={i} style={[styles.card, { borderLeftColor: s.color }]}>
+              <MaterialCommunityIcons name={s.icon} size={30} color={s.color} />
+              <View style={styles.cardTextBox}>
+                <Text style={styles.cardLabel}>{s.label}</Text>
+                <Text style={styles.cardValue}>{s.value}</Text>
+              </View>
+            </View>
+          ))}
+        </View>
+
+        {/*Pomo*/}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Tiempo Total en Pomodoro</Text>
+          <View style={[styles.card, { borderLeftColor: COLORS.card }]}>
+            <MaterialCommunityIcons
+              name="timer-sand"
+              size={30}
+              color={COLORS.card}
+            />
             <View style={styles.cardTextBox}>
-              <Text style={styles.cardLabel}>{s.label}</Text>
-              <Text style={styles.cardValue}>{s.value}</Text>
+              <Text style={styles.cardLabel}>Pomodoro General</Text>
+              <Text style={styles.cardValue}>
+                {formatPomodoroTime(stats.pomodoroMinutesTotal)}
+              </Text>
             </View>
           </View>
-        ))}
-      </View>
-
-      {/*Pomo*/}
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Tiempo Total en Pomodoro</Text>
-        <View style={[styles.card, { borderLeftColor: COLORS.card }]}>
-          <MaterialCommunityIcons
-            name="timer-sand"
-            size={30}
-            color={COLORS.card}
-          />
-          <View style={styles.cardTextBox}>
-            <Text style={styles.cardLabel}>Pomodoro General</Text>
-            <Text style={styles.cardValue}>
-              {formatPomodoroTime(stats.pomodoroMinutesTotal)}
-            </Text>
-          </View>
         </View>
-      </View>
-    </ScrollView>
+      </ScrollView>
+    </>
   );
 }
 
 const styles = StyleSheet.create({
+  topHeader: {
+    backgroundColor: COLORS.primary,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+  backBtn: {
+    padding: 4,
+    borderRadius: 8,
+  },
+  headerTitle: {
+    color: "#fff",
+    fontSize: 18,
+    fontWeight: "700",
+  },
+
   title: {
     fontSize: 26,
     fontWeight: "800",

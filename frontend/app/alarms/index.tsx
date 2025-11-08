@@ -131,111 +131,150 @@ export default function AlarmHome() {
       </View>
     );
   };
+  const renderHeaderBar = () => (
+    <View style={styles.topHeader}>
+      <Pressable
+        onPress={() => router.back()}
+        hitSlop={8}
+        style={styles.backBtn}
+      >
+        <MaterialCommunityIcons name="arrow-left" size={22} color="#fff" />
+      </Pressable>
+      <Text style={styles.headerTitle}>Mis Alarmas</Text>
+      <View style={{ width: 22 }} />
+    </View>
+  );
 
   return (
-    <FlatList
-      data={SECTIONS}
-      keyExtractor={(item) => item.key}
-      style={{ flex: 1, backgroundColor: COLORS.bg }}
-      contentContainerStyle={{
-        paddingBottom: 120,
-        paddingHorizontal: 16,
-        paddingTop: 40,
-      }}
-      ListHeaderComponent={
-        <View style={styles.header}>
-          <Text style={styles.title}>Mis alarmas</Text>
-          <Pressable
-            onPress={() => router.push("/alarms/form")}
-            style={styles.createBtn}
-          >
-            <MaterialCommunityIcons
-              name="plus"
-              size={16}
-              color={COLORS.white}
-            />
-            <Text style={styles.createText}>Crear alarma</Text>
-          </Pressable>
-        </View>
-      }
-      renderItem={({ item: s }) => {
-        const expanded = open[s.key];
-        const data = listByType(s.key) || [];
-
-        return (
-          <View key={s.key} style={styles.sectionWrap}>
-            <Pressable onPress={() => onToggleOpen(s.key)} style={styles.block}>
+    <>
+      {renderHeaderBar()}
+      <FlatList
+        data={SECTIONS}
+        keyExtractor={(item) => item.key}
+        style={{ flex: 1, backgroundColor: COLORS.bg }}
+        contentContainerStyle={{
+          paddingBottom: 120,
+          paddingHorizontal: 16,
+          paddingTop: 40,
+        }}
+        ListHeaderComponent={
+          <View style={styles.header}>
+            <Text style={styles.title}>Mis alarmas</Text>
+            <Pressable
+              onPress={() => router.push("/alarms/form")}
+              style={styles.createBtn}
+            >
               <MaterialCommunityIcons
-                name={s.icon}
-                size={26}
-                color={COLORS.dark}
+                name="plus"
+                size={16}
+                color={COLORS.white}
               />
-              <Text style={styles.blockText}>{s.label}</Text>
-
-              <View style={styles.counterPill}>
-                <Text style={styles.counterText}>{data.length}</Text>
-              </View>
-
-              <MaterialCommunityIcons
-                name="chevron-down"
-                size={24}
-                color={COLORS.dark}
-                style={{
-                  marginLeft: "auto",
-                  transform: [{ rotate: expanded ? "180deg" : "0deg" }],
-                }}
-              />
+              <Text style={styles.createText}>Crear alarma</Text>
             </Pressable>
-
-            {expanded && (
-              <View style={styles.contentBox}>
-                {data.length === 0 ? (
-                  <Text style={styles.emptyText}>
-                    Sin alarmas en esta categoría.
-                  </Text>
-                ) : (
-                  data.map((item) => (
-                    <View key={item.id} style={{ marginBottom: 10 }}>
-                      <AlarmCard
-                        alarm={item}
-                        onToggle={(act) => {
-                          toggleActive(item.id, act).then(() => setSaved(true));
-                          setTimeout(() => setSaved(false), 1100);
-                        }}
-                        onEdit={() =>
-                          router.push({
-                            pathname: "/alarms/form",
-                            params: { id: item.id },
-                          })
-                        }
-                        onDelete={() => setToDelete(item)}
-                      />
-                    </View>
-                  ))
-                )}
-              </View>
-            )}
           </View>
-        );
-      }}
-      ListFooterComponent={
-        <View style={{ paddingBottom: 60 }}>
-          <ConfirmDeleteModal
-            visible={!!toDelete}
-            onCancel={() => setToDelete(null)}
-            onConfirm={() => {
-              if (!toDelete) return;
-              remove(toDelete.id).finally(() => setToDelete(null));
-            }}
-          />
-          <SaveToast visible={saved} text="Actualizado" />
-        </View>
-      }
-    />
+        }
+        renderItem={({ item: s }) => {
+          const expanded = open[s.key];
+          const data = listByType(s.key) || [];
+
+          return (
+            <View key={s.key} style={styles.sectionWrap}>
+              <Pressable
+                onPress={() => onToggleOpen(s.key)}
+                style={styles.block}
+              >
+                <MaterialCommunityIcons
+                  name={s.icon}
+                  size={26}
+                  color={COLORS.dark}
+                />
+                <Text style={styles.blockText}>{s.label}</Text>
+
+                <View style={styles.counterPill}>
+                  <Text style={styles.counterText}>{data.length}</Text>
+                </View>
+
+                <MaterialCommunityIcons
+                  name="chevron-down"
+                  size={24}
+                  color={COLORS.dark}
+                  style={{
+                    marginLeft: "auto",
+                    transform: [{ rotate: expanded ? "180deg" : "0deg" }],
+                  }}
+                />
+              </Pressable>
+
+              {expanded && (
+                <View style={styles.contentBox}>
+                  {data.length === 0 ? (
+                    <Text style={styles.emptyText}>
+                      Sin alarmas en esta categoría.
+                    </Text>
+                  ) : (
+                    data.map((item) => (
+                      <View key={item.id} style={{ marginBottom: 10 }}>
+                        <AlarmCard
+                          alarm={item}
+                          onToggle={(act) => {
+                            toggleActive(item.id, act).then(() =>
+                              setSaved(true)
+                            );
+                            setTimeout(() => setSaved(false), 1100);
+                          }}
+                          onEdit={() =>
+                            router.push({
+                              pathname: "/alarms/form",
+                              params: { id: item.id },
+                            })
+                          }
+                          onDelete={() => setToDelete(item)}
+                        />
+                      </View>
+                    ))
+                  )}
+                </View>
+              )}
+            </View>
+          );
+        }}
+        ListFooterComponent={
+          <View style={{ paddingBottom: 60 }}>
+            <ConfirmDeleteModal
+              visible={!!toDelete}
+              onCancel={() => setToDelete(null)}
+              onConfirm={() => {
+                if (!toDelete) return;
+                remove(toDelete.id).finally(() => setToDelete(null));
+              }}
+            />
+            <SaveToast visible={saved} text="Actualizado" />
+          </View>
+        }
+      />
+    </>
   );
 }
 
 const styles = StyleSheet.create({
+  topHeader: {
+    backgroundColor: COLORS.primary,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+  backBtn: {
+    padding: 4,
+    borderRadius: 8,
+  },
+  headerTitle: {
+    color: "#fff",
+    fontSize: 18,
+    fontWeight: "700",
+  },
+
   container: {
     flex: 1,
     backgroundColor: COLORS.bg,
