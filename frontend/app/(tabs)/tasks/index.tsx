@@ -1,4 +1,4 @@
-import React, { useCallback, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
   Alert,
   Pressable,
@@ -66,6 +66,20 @@ const truncateTitle = (value: string, maxLength: number) =>
     ? `${value.slice(0, maxLength).trimEnd()}...`
     : value;
 
+type TaskFilterKey = "todos" | "a-z" | "z-a" | "recientes";
+
+const TITLE_COLLATOR = new Intl.Collator("es", { sensitivity: "base" });
+
+const sortByTitleAsc = (list: TaskRow[]) =>
+  [...list].sort((a, b) =>
+    TITLE_COLLATOR.compare((a.title ?? "").trim(), (b.title ?? "").trim())
+  );
+
+const sortByTitleDesc = (list: TaskRow[]) =>
+  [...list].sort((a, b) =>
+    TITLE_COLLATOR.compare((b.title ?? "").trim(), (a.title ?? "").trim())
+  );
+
 export default function TasksListScreen() {
   const setSubject = usePomodoroStore((s) => s.setSubject);
   const router = useRouter();
@@ -80,10 +94,11 @@ export default function TasksListScreen() {
 
   const subjectId = subjectIdParam ? Number(subjectIdParam) : null;
 
+  const [rawTasks, setRawTasks] = useState<TaskRow[]>([]);
   const [tasks, setTasks] = useState<TaskRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [filterModalVisible, setFilterModalVisible] = useState(false);
-  const [selectedFilter, setSelectedFilter] = useState("todos");
+  const [selectedFilter, setSelectedFilter] = useState<TaskFilterKey>("todos");
 
   const headerTitle = useMemo(() => {
     const fullTitle = subjectTitle ? `Tareas - ${subjectTitle}` : "Tareas";
@@ -100,16 +115,7 @@ export default function TasksListScreen() {
     try {
       setLoading(true);
       const rows = (await getTasksBySubject(subjectId)) as TaskRow[];
-
-      const pending = rows
-        .filter((task) => task.status !== 1)
-        .sort((a, b) => getCreatedTimestamp(b) - getCreatedTimestamp(a));
-
-      const completed = rows
-        .filter((task) => task.status === 1)
-        .sort((a, b) => getCompletedTimestamp(b) - getCompletedTimestamp(a));
-
-      setTasks([...pending, ...completed]);
+      setRawTasks(rows);
     } catch (error) {
       console.error("Error cargando tareas:", error);
       Alert.alert("Error", "No se pudieron cargar las tareas.");
@@ -123,6 +129,50 @@ export default function TasksListScreen() {
       loadTasks();
     }, [loadTasks])
   );
+
+  const applyFilterToTasks = useCallback(
+    (rows: TaskRow[], filterKey: TaskFilterKey) => {
+      if (!rows.length) return [];
+
+      const pending = rows.filter((task) => task.status !== 1);
+      const completed = rows.filter((task) => task.status === 1);
+
+      const sortByRecentPending = (list: TaskRow[]) =>
+        [...list].sort((a, b) => getCreatedTimestamp(b) - getCreatedTimestamp(a));
+      const sortByRecentCompleted = (list: TaskRow[]) =>
+        [...list].sort((a, b) => getCompletedTimestamp(b) - getCompletedTimestamp(a));
+
+      let sortedPending: TaskRow[] = pending;
+      let sortedCompleted: TaskRow[] = completed;
+
+      switch (filterKey) {
+        case "a-z":
+          sortedPending = sortByTitleAsc(pending);
+          sortedCompleted = sortByTitleAsc(completed);
+          break;
+        case "z-a":
+          sortedPending = sortByTitleDesc(pending);
+          sortedCompleted = sortByTitleDesc(completed);
+          break;
+        case "recientes":
+        case "todos":
+        default:
+          sortedPending = sortByRecentPending(pending);
+          sortedCompleted =
+            filterKey === "recientes"
+              ? sortByRecentCompleted(completed)
+              : sortByRecentCompleted(completed);
+          break;
+      }
+
+      return [...sortedPending, ...sortedCompleted];
+    },
+    []
+  );
+
+  useEffect(() => {
+    setTasks(applyFilterToTasks(rawTasks, selectedFilter));
+  }, [rawTasks, selectedFilter, applyFilterToTasks]);
 
   const goCreate = () => {
     if (!subjectIdParam) {
@@ -269,7 +319,6 @@ export default function TasksListScreen() {
               ]}
               onPress={() => {
                 setSelectedFilter("todos");
-                // coloquen aqui la logica para la funcionalidad
                 setFilterModalVisible(false);
               }}
             >
@@ -299,7 +348,6 @@ export default function TasksListScreen() {
               ]}
               onPress={() => {
                 setSelectedFilter("a-z");
-                //  coloquen aqui la logica para la funcionalidad
                 setFilterModalVisible(false);
               }}
             >
@@ -329,7 +377,6 @@ export default function TasksListScreen() {
               ]}
               onPress={() => {
                 setSelectedFilter("z-a");
-                // coloquen aqui la logica para la funcionalidad
                 setFilterModalVisible(false);
               }}
             >
@@ -359,7 +406,6 @@ export default function TasksListScreen() {
               ]}
               onPress={() => {
                 setSelectedFilter("recientes");
-                // coloquen aqui la logica para la funcionalidad
                 setFilterModalVisible(false);
               }}
             >
@@ -383,35 +429,6 @@ export default function TasksListScreen() {
               </Text>
             </Pressable>
 
-            <Pressable
-              style={[
-                styles.filterOption,
-                selectedFilter === "dia" && styles.filterOptionActive,
-              ]}
-              onPress={() => {
-                setSelectedFilter("dia");
-                // coloquen aqui la logica para la funcionalidad
-                setFilterModalVisible(false);
-              }}
-            >
-              <MaterialCommunityIcons
-                name="calendar-today"
-                size={22}
-                color={
-                  selectedFilter === "dia"
-                    ? SCREEN_COLORS.header
-                    : SCREEN_COLORS.emptyText
-                }
-              />
-              <Text
-                style={[
-                  styles.filterOptionText,
-                  selectedFilter === "dia" && styles.filterOptionTextActive,
-                ]}
-              >
-                Por día
-              </Text>
-            </Pressable>
           </View>
         </Pressable>
       </Modal>
