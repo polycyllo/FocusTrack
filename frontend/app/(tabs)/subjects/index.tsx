@@ -56,6 +56,31 @@ type ScheduleFromDB = {
   subject_id?: number;
 };
 
+type SubjectWithSchedules = {
+  subject: SubjectFromDB;
+  schedules: ScheduleFromDB[];
+};
+
+type FilterKey = "todos" | "a-z" | "z-a" | "recientes" | "dia";
+
+const DAY_OPTIONS = [
+  { label: "Lunes", value: 0 },
+  { label: "Martes", value: 1 },
+  { label: "Miércoles", value: 2 },
+  { label: "Jueves", value: 3 },
+  { label: "Viernes", value: 4 },
+  { label: "Sábado", value: 5 },
+  { label: "Domingo", value: 6 },
+] as const;
+
+const TITLE_COLLATOR = new Intl.Collator("es", { sensitivity: "base" });
+
+const getSubjectNumericId = (item: SubjectWithSchedules) =>
+  item.subject.subjectId ?? item.subject.subject_id ?? 0;
+
+const getSubjectTitle = (item: SubjectWithSchedules) =>
+  (item.subject.title ?? "").trim();
+
 function UserIcon({
   size = 24,
   color = "#fff",
@@ -84,40 +109,82 @@ const COLORS = {
 export default function SubjectsScreen() {
   const router = useRouter();
   const { isAuthenticated, user, logout } = useAuthStore();
-  const [subjects, setSubjects] = useState<
-    Array<{ subject: SubjectFromDB; schedules: ScheduleFromDB[] }>
-  >([]);
+  const [subjects, setSubjects] = useState<SubjectWithSchedules[]>([]);
+  const [allSubjects, setAllSubjects] = useState<SubjectWithSchedules[]>([]);
   const [loading, setLoading] = useState(true);
   const [profileModalVisible, setProfileModalVisible] = useState(false);
 
   // ESTADO FILTROS
   const [filterModalVisible, setFilterModalVisible] = useState(false);
-  const [selectedFilter, setSelectedFilter] = useState<
-    "todos" | "a-z" | "z-a" | "recientes" | "dia"
-  >("todos");
+  const [selectedFilter, setSelectedFilter] = useState<FilterKey>("todos");
+  const [dayFilter, setDayFilter] = useState<number | null>(null);
+  const [dayPickerVisible, setDayPickerVisible] = useState(false);
 
-  const loadSubjects = async () => {
+  const applyFilterToData = useCallback(
+    (data: SubjectWithSchedules[], filterKey: FilterKey, dayValue: number | null) => {
+      if (!data.length) return [];
+      const list = [...data];
+
+      switch (filterKey) {
+        case "a-z":
+          return list.sort((a, b) =>
+            TITLE_COLLATOR.compare(getSubjectTitle(a), getSubjectTitle(b))
+          );
+        case "z-a":
+          return list.sort((a, b) =>
+            TITLE_COLLATOR.compare(getSubjectTitle(b), getSubjectTitle(a))
+          );
+        case "recientes":
+          return list.sort(
+            (a, b) => getSubjectNumericId(b) - getSubjectNumericId(a)
+          );
+        case "dia":
+          if (typeof dayValue !== "number") return list;
+          return list
+            .filter((item) =>
+              (item.schedules ?? []).some((schedule) => schedule.day === dayValue)
+            )
+            .sort((a, b) =>
+              TITLE_COLLATOR.compare(getSubjectTitle(a), getSubjectTitle(b))
+            );
+        case "todos":
+        default:
+          return list;
+      }
+    },
+    []
+  );
+
+  const loadSubjects = useCallback(async () => {
     try {
       setLoading(true);
       const data = await getAllSubjectsWithSchedules();
-      setSubjects(data);
+      setAllSubjects(data);
     } catch (error) {
       console.error("Error cargando materias:", error);
       Alert.alert("Error", "No se pudieron cargar las materias");
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
     loadSubjects();
-  }, []);
+  }, [loadSubjects]);
 
   useFocusEffect(
     useCallback(() => {
       loadSubjects();
-    }, [])
+    }, [loadSubjects])
   );
+
+  useEffect(() => {
+    const effectiveFilter =
+      selectedFilter === "dia" && dayFilter === null ? "todos" : selectedFilter;
+    const effectiveDay = effectiveFilter === "dia" ? dayFilter : null;
+    const prepared = applyFilterToData(allSubjects, effectiveFilter, effectiveDay);
+    setSubjects(prepared);
+  }, [allSubjects, selectedFilter, dayFilter, applyFilterToData]);
 
   const goCreate = () => router.push("/(tabs)/subjects/create" as Href);
 
@@ -153,6 +220,32 @@ export default function SubjectsScreen() {
   const handleAlarms = () => {
     router.push("/alarms" as Href);
   };
+
+  const handleFilter = useCallback((filterKey: FilterKey, dayValue?: number | null) => {
+    const normalizedDay =
+      filterKey === "dia" && typeof dayValue === "number" ? dayValue : null;
+
+    if (filterKey === "dia" && normalizedDay === null) {
+      return;
+    }
+
+    const appliedFilter = filterKey === "dia" ? "dia" : filterKey;
+    setSelectedFilter(appliedFilter);
+    setDayFilter(appliedFilter === "dia" ? normalizedDay : null);
+  }, []);
+
+  const handleDaySelection = useCallback(
+    (dayValue: number | null) => {
+      setDayPickerVisible(false);
+      if (dayValue === null) {
+        handleFilter("todos");
+        return;
+      }
+
+      handleFilter("dia", dayValue);
+    },
+    [handleFilter]
+  );
 
   return (
     <SafeAreaView style={styles.safe}>
@@ -253,8 +346,7 @@ export default function SubjectsScreen() {
                 selectedFilter === "todos" && styles.filterOptionActive,
               ]}
               onPress={() => {
-                setSelectedFilter("todos");
-                // coloquen aqui la logica para la funcionalidad
+                handleFilter("todos");
                 setFilterModalVisible(false);
               }}
             >
@@ -279,8 +371,7 @@ export default function SubjectsScreen() {
                 selectedFilter === "a-z" && styles.filterOptionActive,
               ]}
               onPress={() => {
-                setSelectedFilter("a-z");
-                // coloquen aqui la logica para la funcionalidad
+                handleFilter("a-z");
                 setFilterModalVisible(false);
               }}
             >
@@ -305,8 +396,7 @@ export default function SubjectsScreen() {
                 selectedFilter === "z-a" && styles.filterOptionActive,
               ]}
               onPress={() => {
-                setSelectedFilter("z-a");
-                // coloquen aqui la logica para la funcionalidad
+                handleFilter("z-a");
                 setFilterModalVisible(false);
               }}
             >
@@ -331,8 +421,7 @@ export default function SubjectsScreen() {
                 selectedFilter === "recientes" && styles.filterOptionActive,
               ]}
               onPress={() => {
-                setSelectedFilter("recientes");
-                // coloquen aqui la logica para la funcionalidad
+                handleFilter("recientes");
                 setFilterModalVisible(false);
               }}
             >
@@ -357,9 +446,8 @@ export default function SubjectsScreen() {
                 selectedFilter === "dia" && styles.filterOptionActive,
               ]}
               onPress={() => {
-                setSelectedFilter("dia");
-                // coloquen aqui la logica para la funcionalidad
                 setFilterModalVisible(false);
+                setDayPickerVisible(true);
               }}
             >
               <MaterialCommunityIcons
@@ -373,8 +461,63 @@ export default function SubjectsScreen() {
                   selectedFilter === "dia" && styles.filterOptionTextActive,
                 ]}
               >
-                Por día
+                {dayFilter !== null
+                  ? `Por día (${DAY_OPTIONS.find((d) => d.value === dayFilter)?.label ?? ""})`
+                  : "Por día"}
               </Text>
+            </Pressable>
+          </View>
+        </Pressable>
+      </Modal>
+
+      <Modal
+        visible={dayPickerVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setDayPickerVisible(false)}
+      >
+        <Pressable
+          style={styles.modalOverlay}
+          onPress={() => setDayPickerVisible(false)}
+        >
+          <View style={styles.filterModal}>
+            <Text style={styles.filterModalTitle}>Selecciona un día</Text>
+
+            {DAY_OPTIONS.map((option) => (
+              <Pressable
+                key={option.value}
+                style={[
+                  styles.filterOption,
+                  dayFilter === option.value && styles.filterOptionActive,
+                ]}
+                onPress={() => handleDaySelection(option.value)}
+              >
+                <MaterialCommunityIcons
+                  name="calendar-check"
+                  size={22}
+                  color={dayFilter === option.value ? COLORS.header : COLORS.text}
+                />
+                <Text
+                  style={[
+                    styles.filterOptionText,
+                    dayFilter === option.value && styles.filterOptionTextActive,
+                  ]}
+                >
+                  {option.label}
+                </Text>
+              </Pressable>
+            ))}
+
+            <Pressable
+              style={styles.filterOption}
+              onPress={() => handleDaySelection(null)}
+            >
+              <MaterialCommunityIcons
+                name="format-list-bulleted-square"
+                size={22}
+                color={COLORS.text}
+              />
+              <Text style={styles.filterOptionText}>Mostrar todos</Text>
             </Pressable>
           </View>
         </Pressable>
