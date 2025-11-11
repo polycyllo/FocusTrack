@@ -7,6 +7,7 @@ import {
   View,
   StyleSheet,
   FlatList,
+  Modal, 
 } from "react-native";
 import { useRouter, Href, useFocusEffect } from "expo-router";
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
@@ -55,6 +56,31 @@ type ScheduleFromDB = {
   subject_id?: number;
 };
 
+type SubjectWithSchedules = {
+  subject: SubjectFromDB;
+  schedules: ScheduleFromDB[];
+};
+
+type FilterKey = "todos" | "a-z" | "z-a" | "recientes" | "dia";
+
+const DAY_OPTIONS = [
+  { label: "Lunes", value: 0 },
+  { label: "Martes", value: 1 },
+  { label: "Miércoles", value: 2 },
+  { label: "Jueves", value: 3 },
+  { label: "Viernes", value: 4 },
+  { label: "Sábado", value: 5 },
+  { label: "Domingo", value: 6 },
+] as const;
+
+const TITLE_COLLATOR = new Intl.Collator("es", { sensitivity: "base" });
+
+const getSubjectNumericId = (item: SubjectWithSchedules) =>
+  item.subject.subjectId ?? item.subject.subject_id ?? 0;
+
+const getSubjectTitle = (item: SubjectWithSchedules) =>
+  (item.subject.title ?? "").trim();
+
 function UserIcon({
   size = 24,
   color = "#fff",
@@ -77,39 +103,88 @@ const COLORS = {
   cardText: "#ffffff",
   chipBg: "rgba(255,255,255,0.18)",
   chipBorder: "rgba(255,255,255,0.28)",
+  text: "#0A0A0A",
 };
 
 export default function SubjectsScreen() {
   const router = useRouter();
   const { isAuthenticated, user, logout } = useAuthStore();
-  const [subjects, setSubjects] = useState<
-    Array<{ subject: SubjectFromDB; schedules: ScheduleFromDB[] }>
-  >([]);
+  const [subjects, setSubjects] = useState<SubjectWithSchedules[]>([]);
+  const [allSubjects, setAllSubjects] = useState<SubjectWithSchedules[]>([]);
   const [loading, setLoading] = useState(true);
   const [profileModalVisible, setProfileModalVisible] = useState(false);
 
-  const loadSubjects = async () => {
+  // ESTADO FILTROS
+  const [filterModalVisible, setFilterModalVisible] = useState(false);
+  const [selectedFilter, setSelectedFilter] = useState<FilterKey>("todos");
+  const [dayFilter, setDayFilter] = useState<number | null>(null);
+  const [dayPickerVisible, setDayPickerVisible] = useState(false);
+
+  const applyFilterToData = useCallback(
+    (data: SubjectWithSchedules[], filterKey: FilterKey, dayValue: number | null) => {
+      if (!data.length) return [];
+      const list = [...data];
+
+      switch (filterKey) {
+        case "a-z":
+          return list.sort((a, b) =>
+            TITLE_COLLATOR.compare(getSubjectTitle(a), getSubjectTitle(b))
+          );
+        case "z-a":
+          return list.sort((a, b) =>
+            TITLE_COLLATOR.compare(getSubjectTitle(b), getSubjectTitle(a))
+          );
+        case "recientes":
+          return list.sort(
+            (a, b) => getSubjectNumericId(b) - getSubjectNumericId(a)
+          );
+        case "dia":
+          if (typeof dayValue !== "number") return list;
+          return list
+            .filter((item) =>
+              (item.schedules ?? []).some((schedule) => schedule.day === dayValue)
+            )
+            .sort((a, b) =>
+              TITLE_COLLATOR.compare(getSubjectTitle(a), getSubjectTitle(b))
+            );
+        case "todos":
+        default:
+          return list;
+      }
+    },
+    []
+  );
+
+  const loadSubjects = useCallback(async () => {
     try {
       setLoading(true);
       const data = await getAllSubjectsWithSchedules();
-      setSubjects(data);
+      setAllSubjects(data);
     } catch (error) {
       console.error("Error cargando materias:", error);
       Alert.alert("Error", "No se pudieron cargar las materias");
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
     loadSubjects();
-  }, []);
+  }, [loadSubjects]);
 
   useFocusEffect(
     useCallback(() => {
       loadSubjects();
-    }, [])
+    }, [loadSubjects])
   );
+
+  useEffect(() => {
+    const effectiveFilter =
+      selectedFilter === "dia" && dayFilter === null ? "todos" : selectedFilter;
+    const effectiveDay = effectiveFilter === "dia" ? dayFilter : null;
+    const prepared = applyFilterToData(allSubjects, effectiveFilter, effectiveDay);
+    setSubjects(prepared);
+  }, [allSubjects, selectedFilter, dayFilter, applyFilterToData]);
 
   const goCreate = () => router.push("/(tabs)/subjects/create" as Href);
 
@@ -143,6 +218,32 @@ export default function SubjectsScreen() {
     router.push("/alarms" as Href);
   };
 
+  const handleFilter = useCallback((filterKey: FilterKey, dayValue?: number | null) => {
+    const normalizedDay =
+      filterKey === "dia" && typeof dayValue === "number" ? dayValue : null;
+
+    if (filterKey === "dia" && normalizedDay === null) {
+      return;
+    }
+
+    const appliedFilter = filterKey === "dia" ? "dia" : filterKey;
+    setSelectedFilter(appliedFilter);
+    setDayFilter(appliedFilter === "dia" ? normalizedDay : null);
+  }, []);
+
+  const handleDaySelection = useCallback(
+    (dayValue: number | null) => {
+      setDayPickerVisible(false);
+      if (dayValue === null) {
+        handleFilter("todos");
+        return;
+      }
+
+      handleFilter("dia", dayValue);
+    },
+    [handleFilter]
+  );
+
   return (
     <SafeAreaView style={styles.safe}>
       <View style={styles.container}>
@@ -163,6 +264,17 @@ export default function SubjectsScreen() {
               ]}
             >
               <Text style={styles.createBtnText}>+ Crear</Text>
+            </Pressable>
+
+            {/* botón filtros */}
+            <Pressable
+              onPress={() => setFilterModalVisible(true)}
+              style={({ pressed }) => [
+                styles.filterBtn,
+                pressed && { opacity: 0.85 },
+              ]}
+            >
+              <MaterialCommunityIcons name="filter-variant" size={20} color="#fff" />
             </Pressable>
 
             <Pressable
@@ -194,8 +306,7 @@ export default function SubjectsScreen() {
             contentContainerStyle={{ padding: 12, paddingBottom: 20 }}
             data={subjects}
             keyExtractor={(item) =>
-              (item.subject.subjectId || item.subject.subject_id)?.toString() ||
-              ""
+              (item.subject.subjectId || item.subject.subject_id)?.toString() || ""
             }
             renderItem={({ item }) => (
               <SubjectCard item={item} onDeleted={loadSubjects} />
@@ -211,6 +322,203 @@ export default function SubjectsScreen() {
         onStatistics={handleStatistics}
         onAlarms={handleAlarms}
       />
+
+      {/* Modal de filtros */}
+      <Modal
+        visible={filterModalVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setFilterModalVisible(false)}
+      >
+        <Pressable
+          style={styles.modalOverlay}
+          onPress={() => setFilterModalVisible(false)}
+        >
+          <View style={styles.filterModal}>
+            <Text style={styles.filterModalTitle}>Ordenar por</Text>
+
+            <Pressable
+              style={[
+                styles.filterOption,
+                selectedFilter === "todos" && styles.filterOptionActive,
+              ]}
+              onPress={() => {
+                handleFilter("todos");
+                setFilterModalVisible(false);
+              }}
+            >
+              <MaterialCommunityIcons
+                name="format-list-bulleted"
+                size={22}
+                color={selectedFilter === "todos" ? COLORS.header : COLORS.text}
+              />
+              <Text
+                style={[
+                  styles.filterOptionText,
+                  selectedFilter === "todos" && styles.filterOptionTextActive,
+                ]}
+              >
+                Todos
+              </Text>
+            </Pressable>
+
+            <Pressable
+              style={[
+                styles.filterOption,
+                selectedFilter === "a-z" && styles.filterOptionActive,
+              ]}
+              onPress={() => {
+                handleFilter("a-z");
+                setFilterModalVisible(false);
+              }}
+            >
+              <MaterialCommunityIcons
+                name="sort-alphabetical-ascending"
+                size={22}
+                color={selectedFilter === "a-z" ? COLORS.header : COLORS.text}
+              />
+              <Text
+                style={[
+                  styles.filterOptionText,
+                  selectedFilter === "a-z" && styles.filterOptionTextActive,
+                ]}
+              >
+                A a la Z
+              </Text>
+            </Pressable>
+
+            <Pressable
+              style={[
+                styles.filterOption,
+                selectedFilter === "z-a" && styles.filterOptionActive,
+              ]}
+              onPress={() => {
+                handleFilter("z-a");
+                setFilterModalVisible(false);
+              }}
+            >
+              <MaterialCommunityIcons
+                name="sort-alphabetical-descending"
+                size={22}
+                color={selectedFilter === "z-a" ? COLORS.header : COLORS.text}
+              />
+              <Text
+                style={[
+                  styles.filterOptionText,
+                  selectedFilter === "z-a" && styles.filterOptionTextActive,
+                ]}
+              >
+                Z a la A
+              </Text>
+            </Pressable>
+
+            <Pressable
+              style={[
+                styles.filterOption,
+                selectedFilter === "recientes" && styles.filterOptionActive,
+              ]}
+              onPress={() => {
+                handleFilter("recientes");
+                setFilterModalVisible(false);
+              }}
+            >
+              <MaterialCommunityIcons
+                name="clock-outline"
+                size={22}
+                color={selectedFilter === "recientes" ? COLORS.header : COLORS.text}
+              />
+              <Text
+                style={[
+                  styles.filterOptionText,
+                  selectedFilter === "recientes" && styles.filterOptionTextActive,
+                ]}
+              >
+                Más recientes
+              </Text>
+            </Pressable>
+
+            <Pressable
+              style={[
+                styles.filterOption,
+                selectedFilter === "dia" && styles.filterOptionActive,
+              ]}
+              onPress={() => {
+                setFilterModalVisible(false);
+                setDayPickerVisible(true);
+              }}
+            >
+              <MaterialCommunityIcons
+                name="calendar-today"
+                size={22}
+                color={selectedFilter === "dia" ? COLORS.header : COLORS.text}
+              />
+              <Text
+                style={[
+                  styles.filterOptionText,
+                  selectedFilter === "dia" && styles.filterOptionTextActive,
+                ]}
+              >
+                {dayFilter !== null
+                  ? `Por día (${DAY_OPTIONS.find((d) => d.value === dayFilter)?.label ?? ""})`
+                  : "Por día"}
+              </Text>
+            </Pressable>
+          </View>
+        </Pressable>
+      </Modal>
+
+      <Modal
+        visible={dayPickerVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setDayPickerVisible(false)}
+      >
+        <Pressable
+          style={styles.modalOverlay}
+          onPress={() => setDayPickerVisible(false)}
+        >
+          <View style={styles.filterModal}>
+            <Text style={styles.filterModalTitle}>Selecciona un día</Text>
+
+            {DAY_OPTIONS.map((option) => (
+              <Pressable
+                key={option.value}
+                style={[
+                  styles.filterOption,
+                  dayFilter === option.value && styles.filterOptionActive,
+                ]}
+                onPress={() => handleDaySelection(option.value)}
+              >
+                <MaterialCommunityIcons
+                  name="calendar-check"
+                  size={22}
+                  color={dayFilter === option.value ? COLORS.header : COLORS.text}
+                />
+                <Text
+                  style={[
+                    styles.filterOptionText,
+                    dayFilter === option.value && styles.filterOptionTextActive,
+                  ]}
+                >
+                  {option.label}
+                </Text>
+              </Pressable>
+            ))}
+
+            <Pressable
+              style={styles.filterOption}
+              onPress={() => handleDaySelection(null)}
+            >
+              <MaterialCommunityIcons
+                name="format-list-bulleted-square"
+                size={22}
+                color={COLORS.text}
+              />
+              <Text style={styles.filterOptionText}>Mostrar todos</Text>
+            </Pressable>
+          </View>
+        </Pressable>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -319,12 +627,9 @@ function SubjectCard({
 
   const subtitle =
     item.schedules && item.schedules.length > 0
-      ? `${item.schedules.length} horario${
-          item.schedules.length !== 1 ? "s" : ""
-        }`
+      ? `${item.schedules.length} horario${item.schedules.length !== 1 ? "s" : ""}`
       : undefined;
 
-  // Obtener el ícono correcto desde FORM_ICON_OPTIONS
   const iconKey = item.subject.icon || "book";
   const iconNode =
     FORM_ICON_OPTIONS.find((opt) => opt.key === iconKey)?.node ?? (
@@ -341,11 +646,7 @@ function SubjectCard({
         ]}
         onPress={confirmDelete}
       >
-        <MaterialCommunityIcons
-          name="trash-can-outline"
-          size={18}
-          color="#fff"
-        />
+        <MaterialCommunityIcons name="trash-can-outline" size={18} color="#fff" />
       </Pressable>
 
       <Pressable
@@ -356,11 +657,7 @@ function SubjectCard({
         ]}
         onPress={cancelDelete}
       >
-        <MaterialCommunityIcons
-          name="close-circle-outline"
-          size={18}
-          color="#fff"
-        />
+        <MaterialCommunityIcons name="close-circle-outline" size={18} color="#fff" />
       </Pressable>
     </>
   ) : (
@@ -370,11 +667,7 @@ function SubjectCard({
         style={subjectCardStyles.actionBtn}
         onPress={openPomodoroConfig}
       >
-        <MaterialCommunityIcons
-          name="timer-plus-outline"
-          size={18}
-          color="#fff"
-        />
+        <MaterialCommunityIcons name="timer-plus-outline" size={18} color="#fff" />
       </Pressable>
 
       <Pressable
@@ -459,5 +752,63 @@ const styles = StyleSheet.create({
     fontSize: 14,
     marginTop: 8,
     textAlign: "center",
+  },
+
+  // FILTER STYLES
+  filterBtn: {
+    backgroundColor: COLORS.button,
+    borderColor: COLORS.button,
+    borderWidth: 1,
+    padding: 8,
+    borderRadius: 10,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.5)",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  filterModal: {
+    backgroundColor: "#fff",
+    borderRadius: 16,
+    padding: 20,
+    width: "85%",
+    maxWidth: 400,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
+    elevation: 5,
+  },
+  filterModalTitle: {
+    fontSize: 18,
+    fontWeight: "700",
+    color: COLORS.text,
+    marginBottom: 16,
+    textAlign: "center",
+  },
+  filterOption: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    borderRadius: 10,
+    marginBottom: 8,
+    backgroundColor: "#F5F5F5",
+    gap: 12,
+  },
+  filterOptionActive: {
+    backgroundColor: "#E3F2FD",
+    borderWidth: 2,
+    borderColor: COLORS.header,
+  },
+  filterOptionText: {
+    fontSize: 16,
+    fontWeight: "600",
+    color: COLORS.text,
+  },
+  filterOptionTextActive: {
+    color: COLORS.header,
+    fontWeight: "700",
   },
 });
