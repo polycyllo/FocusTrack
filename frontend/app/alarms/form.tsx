@@ -289,7 +289,7 @@ export default function AlarmForm() {
       setSaved(true);
       setTimeout(() => setSaved(false), 1200);
       setTimeout(() => {
-        router.replace("/alarms");
+        router.back();
       }, 300);
     } catch (e: any) {
       alert(e?.message ?? "Error al guardar");
