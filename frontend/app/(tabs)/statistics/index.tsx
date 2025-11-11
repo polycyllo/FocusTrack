@@ -1,9 +1,10 @@
 import React from "react";
-import { View, Text, StyleSheet, ScrollView, Pressable } from "react-native";
+import { View, Text, StyleSheet, ScrollView, Pressable, ActivityIndicator } from "react-native";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { useStatisticsStore } from "../../../src/store/statistics.store";
 import { formatPomodoroTime } from "../../../src/utils/timeFormatter";
 import { useRouter } from "expo-router";
+import { useFocusEffect } from "@react-navigation/native";
 
 const COLORS = {
   bg: "#D4F3EE",
@@ -16,6 +17,14 @@ const COLORS = {
 
 export default function StatisticsScreen() {
   const stats = useStatisticsStore();
+  const router = useRouter();
+
+  // Cargar estadísticas cuando la pantalla se enfoca
+  useFocusEffect(
+    React.useCallback(() => {
+      stats.refresh();
+    }, [])
+  );
 
   const statCards = [
     {
@@ -37,7 +46,6 @@ export default function StatisticsScreen() {
       color: "#27AE60",
     },
   ];
-  const router = useRouter();
 
   const renderHeaderBar = () => (
     <View style={styles.topHeader}>
@@ -60,37 +68,46 @@ export default function StatisticsScreen() {
         style={{ flex: 1, backgroundColor: COLORS.bg }}
         contentContainerStyle={{ padding: 20 }}
       >
-        {/*tareas */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Progreso de Tareas</Text>
-          {statCards.map((s, i) => (
-            <View key={i} style={[styles.card, { borderLeftColor: s.color }]}>
-              <MaterialCommunityIcons name={s.icon} size={30} color={s.color} />
-              <View style={styles.cardTextBox}>
-                <Text style={styles.cardLabel}>{s.label}</Text>
-                <Text style={styles.cardValue}>{s.value}</Text>
+        {stats.isLoading ? (
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="large" color={COLORS.primary} />
+            <Text style={styles.loadingText}>Cargando estadísticas...</Text>
+          </View>
+        ) : (
+          <>
+            {/*tareas */}
+            <View style={styles.section}>
+              <Text style={styles.sectionTitle}>Progreso de Tareas</Text>
+              {statCards.map((s, i) => (
+                <View key={i} style={[styles.card, { borderLeftColor: s.color }]}>
+                  <MaterialCommunityIcons name={s.icon} size={30} color={s.color} />
+                  <View style={styles.cardTextBox}>
+                    <Text style={styles.cardLabel}>{s.label}</Text>
+                    <Text style={styles.cardValue}>{s.value}</Text>
+                  </View>
+                </View>
+              ))}
+            </View>
+
+            {/*Pomo*/}
+            <View style={styles.section}>
+              <Text style={styles.sectionTitle}>Tiempo Total en Pomodoro</Text>
+              <View style={[styles.card, { borderLeftColor: COLORS.card }]}>
+                <MaterialCommunityIcons
+                  name="timer-sand"
+                  size={30}
+                  color={COLORS.card}
+                />
+                <View style={styles.cardTextBox}>
+                  <Text style={styles.cardLabel}>Pomodoro General</Text>
+                  <Text style={styles.cardValue}>
+                    {formatPomodoroTime(stats.pomodoroMinutesTotal)}
+                  </Text>
+                </View>
               </View>
             </View>
-          ))}
-        </View>
-
-        {/*Pomo*/}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Tiempo Total en Pomodoro</Text>
-          <View style={[styles.card, { borderLeftColor: COLORS.card }]}>
-            <MaterialCommunityIcons
-              name="timer-sand"
-              size={30}
-              color={COLORS.card}
-            />
-            <View style={styles.cardTextBox}>
-              <Text style={styles.cardLabel}>Pomodoro General</Text>
-              <Text style={styles.cardValue}>
-                {formatPomodoroTime(stats.pomodoroMinutesTotal)}
-              </Text>
-            </View>
-          </View>
-        </View>
+          </>
+        )}
       </ScrollView>
     </>
   );
@@ -157,5 +174,17 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontWeight: "800",
     color: COLORS.primaryDark,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    paddingVertical: 60,
+  },
+  loadingText: {
+    marginTop: 12,
+    fontSize: 16,
+    color: COLORS.primaryDark,
+    fontWeight: "600",
   },
 });

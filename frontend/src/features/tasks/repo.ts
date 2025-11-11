@@ -51,3 +51,20 @@ export async function updateTaskStatus(taskId: number, status: 0 | 1) {
     .where(eq(task.taskId, taskId));
 }
 
+export async function getAllTasks() {
+  const rows = await db.select().from(task).orderBy(desc(task.taskId));
+  return rows;
+}
+
+export async function getTasksCount() {
+  const allTasks = await getAllTasks();
+  const total = allTasks.length;
+  const completed = allTasks.filter((t) => t.status === 1).length;
+  const pending = allTasks.filter((t) => t.status === 0).length;
+
+  return {
+    total,
+    completed,
+    pending,
+  };
+}
