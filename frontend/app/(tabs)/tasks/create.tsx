@@ -9,10 +9,10 @@ import {
   TextInput,
   View,
 } from "react-native";
-import { Ionicons } from "@expo/vector-icons";
 import { useLocalSearchParams, useRouter } from "expo-router";
 
 import { ColorIconPicker } from "@/components/forms/ColorIconPicker";
+import { ArrowBackButton } from "@/components/ArrowBackButton";
 import {
   FORM_THEME,
   FORM_COLOR_SWATCHES,
@@ -87,9 +87,7 @@ export default function TaskCreateScreen() {
   return (
     <SafeAreaView style={styles.safe}>
       <View style={styles.header}>
-        <Pressable style={styles.backBtn} onPress={() => router.back()}>
-          <Ionicons name="chevron-back" size={22} color="#fff" />
-        </Pressable>
+        <ArrowBackButton hitSlop={8} style={styles.backBtn} />
         <Text style={styles.headerTitle}>
           Crear Tarea{subjectTitle ? ` - ${subjectTitle}` : ""}
         </Text>

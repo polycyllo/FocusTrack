@@ -16,6 +16,7 @@ import {
 import { useRouter, Href } from "expo-router";
 import Svg, { Circle } from "react-native-svg";
 
+import { ArrowBackButton } from "@/components/ArrowBackButton";
 import { usePomodoroStore, PomodoroMode } from "@/src/store/pomodoro.store";
 import { useSubjectsStore } from "@/src/store/subjects.store";
 
@@ -32,7 +33,7 @@ const SECONDARY_TEXT = "#0A0A0A";
 const COMPLETION_BACKGROUND = "#E53935";
 
 const MODE_LABELS: Record<PomodoroMode, string> = {
-  focus: "Tiempo de Foco",
+  focus: "Concentrate",
   short: "Descanso Corto",
   long: "Descanso Largo",
 };
@@ -254,12 +255,10 @@ export default function PomodoroScreen() {
     >
       <View style={[styles.container, { backgroundColor: composedBackground }]}>
         <View style={styles.header}>
-          <Pressable
+          <ArrowBackButton
             onPress={handleGoBack}
             style={({ pressed }) => [styles.backBtn, pressed && styles.pressed]}
-          >
-            <Text style={styles.backBtnText}>{"<"}</Text>
-          </Pressable>
+          />
           <Text style={styles.headerTitle}>Pomodoro</Text>
           <View style={{ width: 24 }} />
         </View>
@@ -427,11 +426,6 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
   },
   backBtn: { padding: 6, borderRadius: 10 },
-  backBtnText: {
-    color: WHITE,
-    fontSize: 20,
-    fontWeight: "800",
-  },
   pressed: { opacity: 0.7 },
   headerTitle: {
     color: WHITE,

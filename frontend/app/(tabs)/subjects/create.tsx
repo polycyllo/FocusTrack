@@ -15,6 +15,7 @@ import DateTimePicker, {
 } from "@react-native-community/datetimepicker";
 import { Ionicons } from "@expo/vector-icons";
 
+import { ArrowBackButton } from "@/components/ArrowBackButton";
 import { ColorIconPicker } from "@/components/forms/ColorIconPicker";
 import { addSubjectWithSchedules } from "@/src/features/subjects/repo";
 import {
@@ -251,13 +252,7 @@ export default function SubjectCreateScreen() {
   return (
     <SafeAreaView style={styles.safe}>
       <View style={styles.header}>
-        <Pressable
-          onPress={() => router.back()}
-          hitSlop={8}
-          style={styles.backBtn}
-        >
-          <Ionicons name="arrow-back" size={22} color="#fff" />
-        </Pressable>
+        <ArrowBackButton hitSlop={8} style={styles.backBtn} />
         <Text style={styles.headerTitle}>Crear Materia</Text>
         <View style={{ width: 22 }} />
       </View>
