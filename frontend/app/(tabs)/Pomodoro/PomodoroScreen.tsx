@@ -32,7 +32,7 @@ const SECONDARY_TEXT = "#0A0A0A";
 const COMPLETION_BACKGROUND = "#E53935";
 
 const MODE_LABELS: Record<PomodoroMode, string> = {
-  focus: "Tiempo de Foco",
+  focus: "Tiempo de Enfoque",
   short: "Descanso Corto",
   long: "Descanso Largo",
 };
