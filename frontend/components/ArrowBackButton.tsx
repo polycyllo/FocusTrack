@@ -1,9 +1,8 @@
 import React from "react";
-import {
-  Pressable,
+import { Pressable, StyleSheet } from "react-native";
+import type {
   PressableProps,
   PressableStateCallbackType,
-  StyleSheet,
   StyleProp,
   ViewStyle,
 } from "react-native";

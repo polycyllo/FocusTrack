@@ -11,6 +11,7 @@ import {
 } from "react-native";
 import { useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
+import { ArrowBackButton } from "@/components/ArrowBackButton";
 
 import {
   SubjectCardLayout,
@@ -232,9 +233,11 @@ export default function TasksListScreen() {
       {/* Header personalizado */}
       <View style={styles.headerContainer}>
         <View style={styles.headerContent}>
-          <Pressable onPress={() => router.back()} style={styles.backButton}>
-            <Ionicons name="chevron-back" size={22} color="#fff" />
-          </Pressable>
+          <ArrowBackButton
+            onPress={() => router.back()}
+            hitSlop={8}
+            style={styles.backButton}
+          />
 
           <Text style={styles.headerTitle} numberOfLines={1}>
             {headerTitle}
