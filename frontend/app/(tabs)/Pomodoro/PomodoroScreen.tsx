@@ -46,7 +46,8 @@ export default function PomodoroScreen() {
   }, [router]);
 
   const session = usePomodoroStore((s) => s.session);
-  const cyclesPerRun = usePomodoroStore((s) => s.config.cycles || 1);
+  const config = usePomodoroStore((s) => s.config);
+  const cyclesPerRun = config.cycles || 1;
   const pause = usePomodoroStore((s) => s.pause);
   const resume = usePomodoroStore((s) => s.resume);
   const reset = usePomodoroStore((s) => s.reset);
@@ -79,6 +80,12 @@ export default function PomodoroScreen() {
     if (subjectName) setCachedSubjectName(subjectName);
   }, [subjectName]);
   const displaySubject = subjectName ?? cachedSubjectName;
+  const fullTimeForCurrentMode = useMemo(() => {
+    if (session.mode === "focus") return config.focusTime * 60;
+    if (session.mode === "short") return config.shortBreak * 60;
+    if (session.mode === "long") return config.longBreak * 60;
+    return 1;
+  }, [session.mode, config]);
 
   const minutes = Math.floor(session.remaining / 60);
   const seconds = session.remaining % 60;
@@ -145,34 +152,26 @@ export default function PomodoroScreen() {
       return;
     }
 
+    const didReset = session.remaining === fullTimeForCurrentMode;
+
     if (session.mode !== previousMode) {
       if (hasStarted) {
         void playBell();
       }
-
       prevMode.current = session.mode;
       setInitialSeconds(Math.max(session.remaining, 1));
-
       clearAutoStartCountdown();
-      return;
-    }
-
-    if (session.remaining > initialSeconds) {
+    } else if (didReset && session.remaining > 0) {
       setInitialSeconds(Math.max(session.remaining, 1));
-      return;
     }
-
-    if (isIdle) setInitialSeconds(Math.max(session.remaining, 1));
   }, [
     session.mode,
     session.remaining,
-    initialSeconds,
-    isIdle,
-    startAutoStartCountdown,
-    clearAutoStartCountdown,
+    fullTimeForCurrentMode,
     hasStarted,
     showCompletionOverlay,
     cyclesPerRun,
+    clearAutoStartCountdown,
   ]);
 
   useEffect(() => {
@@ -219,10 +218,6 @@ export default function PomodoroScreen() {
     clearAutoStartCountdown();
     setHasStarted(true);
     setShowCompletionOverlay(false);
-    setInitialSeconds((prev) => {
-      const next = Math.max(session.remaining, 1);
-      return next > prev ? next : prev;
-    });
     resume();
   };
   const handlePause = () => {
