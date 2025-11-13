@@ -76,9 +76,14 @@ export const usePomodoroStore = create<PomodoroState>()(
         set((s) => ({ session: { ...s.session, isRunning: true } })),
 
       reset: () =>
-        set(() => ({
-          config: DEFAULTS,
-          session: makeInitialSession(),
+        set((s) => ({
+          session: {
+            mode: "focus",
+            remaining: s.config.focusTime * 60,
+            isRunning: false,
+            completedFocus: 0,
+            subjectId: null,
+          },
         })),
 
       nextPhase: () =>
@@ -139,8 +144,10 @@ export const usePomodoroStore = create<PomodoroState>()(
           const { config, session } = s;
           if (session.mode === "focus") {
             // Guardar el pomodoro completado en la base de datos
-            const subjectId = session.subjectId ? parseInt(session.subjectId) : null;
-            
+            const subjectId = session.subjectId
+              ? parseInt(session.subjectId)
+              : null;
+
             if (subjectId) {
               savePomodoroSession({
                 focus: config.focusTime,
