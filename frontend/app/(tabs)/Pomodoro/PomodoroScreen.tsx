@@ -33,11 +33,15 @@ const COMPLETION_BACKGROUND = "#E53935";
 
 export default function PomodoroScreen() {
   const router = useRouter();
+  const [showCompletionOverlay, setShowCompletionOverlay] = useState(false);
+
   const handleGoBack = useCallback(() => {
+    setShowCompletionOverlay(false);
     router.replace("/(tabs)/Pomodoro/PomodoroConfigForm" as Href);
   }, [router]);
 
   const session = usePomodoroStore((s) => s.session);
+  const cyclesPerRun = usePomodoroStore((s) => s.config.cycles || 1);
   const pause = usePomodoroStore((s) => s.pause);
   const resume = usePomodoroStore((s) => s.resume);
   const reset = usePomodoroStore((s) => s.reset);
@@ -84,8 +88,6 @@ export default function PomodoroScreen() {
   const prevMode = useRef(session.mode);
   const autoStartTimer = useRef<ReturnType<typeof setInterval> | null>(null);
   const [autoStartSeconds, setAutoStartSeconds] = useState<number | null>(null);
-  const [showCompletionOverlay, setShowCompletionOverlay] = useState(false);
-  const prevCompletedFocus = useRef(session.completedFocus);
 
   const clearAutoStartCountdown = useCallback(() => {
     if (autoStartTimer.current !== null) {
@@ -115,16 +117,23 @@ export default function PomodoroScreen() {
   }, [clearAutoStartCountdown]);
 
   useEffect(() => {
-    const prevCompleted = prevCompletedFocus.current;
-    if (session.completedFocus > prevCompleted) {
-      setShowCompletionOverlay(true);
-      clearAutoStartCountdown();
-    }
-    prevCompletedFocus.current = session.completedFocus;
-  }, [session.completedFocus, clearAutoStartCountdown]);
-
-  useEffect(() => {
     const previousMode = prevMode.current;
+    const completedCycles =
+      cyclesPerRun > 0 &&
+      session.completedFocus !== 0 &&
+      session.completedFocus % cyclesPerRun === 0;
+
+    if (
+      previousMode === "long" &&
+      session.mode === "focus" &&
+      completedCycles
+    ) {
+      setShowCompletionOverlay(true);
+      setHasStarted(false);
+      clearAutoStartCountdown();
+      prevMode.current = session.mode;
+      return;
+    }
 
     if (showCompletionOverlay) {
       prevMode.current = session.mode;
@@ -165,6 +174,7 @@ export default function PomodoroScreen() {
     clearAutoStartCountdown,
     hasStarted,
     showCompletionOverlay,
+    cyclesPerRun,
   ]);
 
   useEffect(() => {
@@ -182,7 +192,10 @@ export default function PomodoroScreen() {
   }, [autoStartSeconds, resume]);
 
   useEffect(() => {
-    return () => clearAutoStartCountdown();
+    return () => {
+      clearAutoStartCountdown();
+      setShowCompletionOverlay(false);
+    };
   }, [clearAutoStartCountdown]);
 
   const fillRatio = useMemo(() => {
@@ -266,15 +279,17 @@ export default function PomodoroScreen() {
                 <Text style={styles.completionText}>Sesión Terminada!</Text>
               </View>
 
-              <Pressable
-                style={({ pressed }) => [
-                  styles.completionButton,
-                  pressed && styles.btnPressed,
-                ]}
-                onPress={handleGoBack}
-              >
-                <Text style={styles.completionButtonText}>Volver</Text>
-              </Pressable>
+              <View style={styles.completionActions}>
+                <Pressable
+                  style={({ pressed }) => [
+                    styles.completionButton,
+                    pressed && styles.btnPressed,
+                  ]}
+                  onPress={handleGoBack}
+                >
+                  <Text style={styles.completionButtonText}>Volver</Text>
+                </Pressable>
+              </View>
             </View>
           ) : (
             <>
@@ -484,12 +499,13 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     gap: 32,
+    paddingHorizontal: 24,
   },
   completionCircle: {
-    width: 200,
-    height: 200,
-    borderRadius: 100,
-    borderWidth: 6,
+    width: RING_SIZE,
+    height: RING_SIZE,
+    borderRadius: RING_SIZE / 2,
+    borderWidth: STROKE,
     borderColor: WHITE,
     alignItems: "center",
     justifyContent: "center",
@@ -506,6 +522,7 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     borderRadius: 16,
     backgroundColor: WHITE,
+    alignItems: "center",
   },
   completionButtonText: {
     color: COMPLETION_BACKGROUND,
