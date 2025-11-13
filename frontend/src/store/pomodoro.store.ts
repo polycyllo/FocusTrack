@@ -2,6 +2,7 @@ import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { savePomodoroSession } from "../features/pomodoro/repo";
+import { useStatisticsStore } from "./statistics.store";
 
 export type PomodoroMode = "focus" | "short" | "long";
 
@@ -138,7 +139,9 @@ export const usePomodoroStore = create<PomodoroState>()(
       tick: () => {
         const s = get();
         if (!s.session.isRunning) return;
-
+        if (s.session.mode === "focus") {
+          useStatisticsStore.getState().incrementFocusSecond();
+        }
         const cur = s.session.remaining;
         if (cur <= 1) {
           const { config, session } = s;
@@ -148,17 +151,15 @@ export const usePomodoroStore = create<PomodoroState>()(
               ? parseInt(session.subjectId)
               : null;
 
-            if (subjectId) {
-              savePomodoroSession({
-                focus: config.focusTime,
-                shortBreak: config.shortBreak,
-                longBreak: config.longBreak,
-                cicle: config.cycles,
-                subjectId: subjectId,
-              }).catch((err) => {
-                console.error("Error al guardar pomodoro:", err);
-              });
-            }
+            savePomodoroSession({
+              focus: config.focusTime,
+              shortBreak: config.shortBreak,
+              longBreak: config.longBreak,
+              cicle: config.cycles,
+              subjectId: subjectId,
+            }).catch((err) => {
+              console.error("Error al guardar pomodoro:", err);
+            });
 
             const nextCompleted = session.completedFocus + 1;
             if (nextCompleted % config.cycles === 0) {

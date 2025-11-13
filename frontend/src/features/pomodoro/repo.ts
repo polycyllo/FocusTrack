@@ -7,7 +7,7 @@ export type SavePomodoroInput = {
   shortBreak: number;
   longBreak: number;
   cicle: number;
-  subjectId: number;
+  subjectId: number | null;
 };
 
 /**
