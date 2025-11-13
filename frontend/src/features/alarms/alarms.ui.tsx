@@ -80,10 +80,10 @@ export const AlarmCard: React.FC<{
 
   const bgColor =
     alarm.repeatType === "daily"
-      ? "#A8E6CF"
+      ? "#AECBFA"
       : alarm.repeatType === "custom"
       ? "#FFD3B6"
-      : "#D4F3EE";
+      : "#D7AEF5";
 
   return (
     <View
@@ -91,12 +91,15 @@ export const AlarmCard: React.FC<{
         styles.card,
         {
           backgroundColor: bgColor,
-          borderLeftWidth: 4,
-          borderLeftColor: isActive ? COLORS.primaryDark : "#999",
+          borderLeftWidth: 5,
+          borderLeftColor: isActive ? COLORS.primaryDark : "#bbb",
           shadowColor: "#000",
-          shadowOpacity: 0.1,
-          shadowRadius: 4,
-          elevation: 2,
+          shadowOpacity: 0.18,
+          shadowRadius: 6,
+          shadowOffset: { width: 0, height: 3 },
+          elevation: 4,
+          borderWidth: 1,
+          borderColor: "rgba(0,0,0,0.05)",
         },
       ]}
     >

@@ -211,10 +211,7 @@ export default function SubjectsScreen() {
   };
 
   const handleStatistics = () => {
-    Alert.alert(
-      "Implementar Estadísticas",
-      "Aquí implementariamos las estadísticas del usuario"
-    );
+    router.push("/(tabs)/statistics" as Href);
   };
 
   const handleAlarms = () => {

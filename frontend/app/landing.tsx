@@ -8,6 +8,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
+import { TouchableWithoutFeedback, Keyboard } from 'react-native';
 
 export default function LandingScreen() {
   const router = useRouter();
@@ -15,62 +16,69 @@ export default function LandingScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
-      {/* Menú desplegable */}
-      <View style={styles.header}>
-        <Pressable
-          onPress={() => setMenuVisible(!menuVisible)}
-          style={styles.menuButton}
-        >
-          <Ionicons name="menu" size={28} color="#fff" />
-        </Pressable>
-      </View>
+      {/* Captura toques fuera del menú */}
+      <TouchableWithoutFeedback onPress={() => setMenuVisible(false)}>
+        <View style={{ flex: 1 }}>
+          {/* Menú desplegable */}
+          <View style={styles.header}>
+            <Pressable
+              onPress={() => setMenuVisible(!menuVisible)}
+              style={styles.menuButton}
+            >
+              <Ionicons name="menu" size={28} color="#fff" />
+            </Pressable>
+          </View>
 
-      {/* Dropdown Menu */}
-      {menuVisible && (
-        <View style={styles.dropdown}>
-          <Pressable
-            style={styles.dropdownItem}
-            onPress={() => {
-              setMenuVisible(false);
-              router.push('/auth/login');
-            }}
-          >
-            <Ionicons name="log-in-outline" size={20} color="#0A0A0A" />
-            <Text style={styles.dropdownText}>Iniciar Sesión</Text>
-          </Pressable>
-          <View style={styles.dropdownDivider} />
-          <Pressable
-            style={styles.dropdownItem}
-            onPress={() => {
-              setMenuVisible(false);
-              router.push('/auth/register');
-            }}
-          >
-            <Ionicons name="person-add-outline" size={20} color="#0A0A0A" />
-            <Text style={styles.dropdownText}>Registrarse</Text>
-          </Pressable>
+          {/* Dropdown */}
+          {menuVisible && (
+            <View style={styles.dropdown}>
+              <Pressable
+                style={styles.dropdownItem}
+                onPress={() => {
+                  setMenuVisible(false);
+                  router.push('/auth/login');
+                }}
+              >
+                <Ionicons name="log-in-outline" size={20} color="#0A0A0A" />
+                <Text style={styles.dropdownText}>Iniciar Sesión</Text>
+              </Pressable>
+
+              <View style={styles.dropdownDivider} />
+
+              <Pressable
+                style={styles.dropdownItem}
+                onPress={() => {
+                  setMenuVisible(false);
+                  router.push('/auth/register');
+                }}
+              >
+                <Ionicons name="person-add-outline" size={20} color="#0A0A0A" />
+                <Text style={styles.dropdownText}>Registrarse</Text>
+              </Pressable>
+            </View>
+          )}
+
+          {/* Contenido central */}
+          <View style={styles.content}>
+            <View style={styles.logoContainer}>
+              <Ionicons name="time" size={80} color="#fff" />
+              <Text style={styles.logoText}>FocusTrack</Text>
+              <Text style={styles.tagline}>Tu agenda estudiantil inteligente</Text>
+            </View>
+
+            <Pressable
+              style={({ pressed }) => [
+                styles.beginButton,
+                pressed && { opacity: 0.85 },
+              ]}
+              onPress={() => router.push('/(tabs)/subjects')}
+            >
+              <Text style={styles.beginButtonText}>Comenzar</Text>
+              <Ionicons name="arrow-forward" size={20} color="#fff" />
+            </Pressable>
+          </View>
         </View>
-      )}
-
-      {/* Logo y contenido central */}
-      <View style={styles.content}>
-        <View style={styles.logoContainer}>
-          <Ionicons name="time" size={80} color="#fff" />
-          <Text style={styles.logoText}>FocusTrack</Text>
-          <Text style={styles.tagline}>Tu agenda estudiantil inteligente</Text>
-        </View>
-
-        <Pressable
-          style={({ pressed }) => [
-            styles.beginButton,
-            pressed && { opacity: 0.85 },
-          ]}
-          onPress={() => router.push('/(tabs)/subjects')}
-        >
-          <Text style={styles.beginButtonText}>Comenzar</Text>
-          <Ionicons name="arrow-forward" size={20} color="#fff" />
-        </Pressable>
-      </View>
+      </TouchableWithoutFeedback>
     </SafeAreaView>
   );
 }
@@ -81,7 +89,8 @@ const styles = StyleSheet.create({
     backgroundColor: '#4A90E2',
   },
   header: {
-    padding: 16,
+    paddingTop: 40,  
+    paddingRight: 16,
     alignItems: 'flex-end',
   },
   menuButton: {
@@ -91,7 +100,7 @@ const styles = StyleSheet.create({
   },
   dropdown: {
     position: 'absolute',
-    top: 70,
+    top: 90,
     right: 16,
     backgroundColor: '#fff',
     borderRadius: 12,
