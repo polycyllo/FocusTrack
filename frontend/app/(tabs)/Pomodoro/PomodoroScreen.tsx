@@ -16,7 +16,7 @@ import {
 import { useRouter, Href } from "expo-router";
 import Svg, { Circle } from "react-native-svg";
 
-import { usePomodoroStore } from "@/src/store/pomodoro.store";
+import { usePomodoroStore, PomodoroMode } from "@/src/store/pomodoro.store";
 import { useSubjectsStore } from "@/src/store/subjects.store";
 
 import type { PomodoroSessionState } from "@/constants/pomodoro";
@@ -31,6 +31,11 @@ const WHITE = "#FFFFFF";
 const SECONDARY_TEXT = "#0A0A0A";
 const COMPLETION_BACKGROUND = "#E53935";
 
+const MODE_LABELS: Record<PomodoroMode, string> = {
+  focus: "Tiempo de Foco",
+  short: "Descanso Corto",
+  long: "Descanso Largo",
+};
 export default function PomodoroScreen() {
   const router = useRouter();
   const [showCompletionOverlay, setShowCompletionOverlay] = useState(false);
@@ -148,14 +153,7 @@ export default function PomodoroScreen() {
       prevMode.current = session.mode;
       setInitialSeconds(Math.max(session.remaining, 1));
 
-      if (
-        (session.mode === "short" || session.mode === "long") &&
-        !session.isRunning
-      ) {
-        startAutoStartCountdown();
-      } else {
-        clearAutoStartCountdown();
-      }
+      clearAutoStartCountdown();
       return;
     }
 
@@ -256,11 +254,10 @@ export default function PomodoroScreen() {
   const secondaryAction = visualState.secondary;
 
   return (
-    <SafeAreaView style={[styles.safe, { backgroundColor: composedBackground }]}
+    <SafeAreaView
+      style={[styles.safe, { backgroundColor: composedBackground }]}
     >
-      <View
-        style={[styles.container, { backgroundColor: composedBackground }]}
-      >
+      <View style={[styles.container, { backgroundColor: composedBackground }]}>
         <View style={styles.header}>
           <Pressable
             onPress={handleGoBack}
@@ -302,7 +299,16 @@ export default function PomodoroScreen() {
                   {autoStartSeconds}s
                 </Text>
               ) : null}
-
+              <View style={styles.statusContainer}>
+                <Text style={styles.modeLabel}>
+                  {MODE_LABELS[session.mode]}
+                </Text>
+                {session.mode === "focus" && (
+                  <Text style={styles.cycleLabel}>
+                    Ciclo: {session.completedFocus + 1} / {cyclesPerRun}
+                  </Text>
+                )}
+              </View>
               {/* Anillo y tempo  */}
               <View style={styles.ringWrapper}>
                 <Svg
@@ -457,6 +463,24 @@ const styles = StyleSheet.create({
     fontSize: 24,
     fontWeight: "700",
   },
+  statusContainer: {
+    alignItems: "center",
+    marginBottom: 16, // Añade espacio antes del anillo
+  },
+  modeLabel: {
+    color: WHITE,
+    fontSize: 28,
+    fontWeight: "800",
+    letterSpacing: 0.5,
+    opacity: 0.95,
+    textTransform: "uppercase",
+  },
+  cycleLabel: {
+    color: WHITE,
+    fontSize: 18,
+    fontWeight: "600",
+    opacity: 0.8,
+  },
 
   ringWrapper: {
     position: "relative",
@@ -516,6 +540,10 @@ const styles = StyleSheet.create({
     fontSize: 24,
     fontWeight: "800",
     textAlign: "center",
+  },
+  completionActions: {
+    width: "100%",
+    alignItems: "center",
   },
   completionButton: {
     paddingHorizontal: 32,
