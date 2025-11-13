@@ -14,14 +14,33 @@ import { useRouter } from "expo-router";
 import { useFocusEffect } from "@react-navigation/native";
 
 function formatSecondsToTime(totalSeconds: number) {
-  const hours = Math.floor(totalSeconds / 3600);
-  const minutes = Math.floor((totalSeconds % 3600) / 60);
-  const seconds = totalSeconds % 60;
+  const SECONDS_PER_DAY = 86400;
+  const SECONDS_PER_HOUR = 3600;
+  const SECONDS_PER_MINUTE = 60;
 
-  return `${String(hours).padStart(2, "0")}h ${String(minutes).padStart(
-    2,
-    "0"
-  )}m ${String(seconds).padStart(2, "0")}s`;
+  const days = Math.floor(totalSeconds / SECONDS_PER_DAY);
+  const remainingSecondsAfterDays = totalSeconds % SECONDS_PER_DAY;
+
+  const hours = Math.floor(remainingSecondsAfterDays / SECONDS_PER_HOUR);
+  const remainingSecondsAfterHours =
+    remainingSecondsAfterDays % SECONDS_PER_HOUR;
+
+  const minutes = Math.floor(remainingSecondsAfterHours / SECONDS_PER_MINUTE);
+
+  const seconds = remainingSecondsAfterHours % SECONDS_PER_MINUTE;
+
+  const daysStr = `${String(days)}d`;
+  const hoursStr = `${String(hours).padStart(2, "0")}h`;
+  const minutesStr = `${String(minutes).padStart(2, "0")}m`;
+  const secondsStr = `${String(seconds).padStart(2, "0")}s`;
+
+  if (days > 0) {
+    return `${daysStr} ${hoursStr} ${minutesStr} ${secondsStr}`;
+  } else if (hours > 0) {
+    return `${hoursStr} ${minutesStr} ${secondsStr}`;
+  } else {
+    return `${minutesStr} ${secondsStr}`;
+  }
 }
 
 const COLORS = {
