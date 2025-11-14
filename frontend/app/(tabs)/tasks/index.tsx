@@ -473,8 +473,12 @@ function TaskCard({
       actions={
         <>
           <Pressable
-            style={subjectCardStyles.actionBtn}
+            style={[
+              subjectCardStyles.actionBtn,
+              completed && taskCardStyles.disabledAction,
+            ]}
             onPress={onOpenPomodoro}
+            disabled={completed}
           >
             <MaterialCommunityIcons
               name="timer-plus-outline"
@@ -504,6 +508,9 @@ function TaskCard({
 }
 
 const taskCardStyles = StyleSheet.create({
+  disabledAction: {
+    opacity: 0.4,
+  },
   checkboxButton: {
     width: 32,
     height: 32,
