@@ -1,4 +1,4 @@
-import React, { useEffect, useCallback, useState } from "react";
+import React, { useEffect, useCallback, useState, useMemo } from "react";
 import {
   Alert,
   Pressable,
@@ -7,7 +7,8 @@ import {
   View,
   StyleSheet,
   FlatList,
-  Modal, 
+  Modal,
+  TextInput,
 } from "react-native";
 import { useRouter, Href, useFocusEffect } from "expo-router";
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
@@ -119,11 +120,27 @@ export default function SubjectsScreen() {
   const [selectedFilter, setSelectedFilter] = useState<FilterKey>("todos");
   const [dayFilter, setDayFilter] = useState<number | null>(null);
   const [dayPickerVisible, setDayPickerVisible] = useState(false);
+  
+  // Estado para búsqueda
+  const [searchQuery, setSearchQuery] = useState("");
 
   const applyFilterToData = useCallback(
-    (data: SubjectWithSchedules[], filterKey: FilterKey, dayValue: number | null) => {
+    (
+      data: SubjectWithSchedules[],
+      filterKey: FilterKey,
+      dayValue: number | null,
+      search: string
+    ) => {
       if (!data.length) return [];
-      const list = [...data];
+      let list = [...data];
+
+      // Aplicar búsqueda primero
+      if (search.trim()) {
+        const searchLower = search.toLowerCase().trim();
+        list = list.filter((item) =>
+          getSubjectTitle(item).toLowerCase().includes(searchLower)
+        );
+      }
 
       switch (filterKey) {
         case "a-z":
@@ -178,13 +195,19 @@ export default function SubjectsScreen() {
     }, [loadSubjects])
   );
 
+  // Aplicar filtros y búsqueda 
   useEffect(() => {
     const effectiveFilter =
       selectedFilter === "dia" && dayFilter === null ? "todos" : selectedFilter;
     const effectiveDay = effectiveFilter === "dia" ? dayFilter : null;
-    const prepared = applyFilterToData(allSubjects, effectiveFilter, effectiveDay);
+    const prepared = applyFilterToData(
+      allSubjects,
+      effectiveFilter,
+      effectiveDay,
+      searchQuery
+    );
     setSubjects(prepared);
-  }, [allSubjects, selectedFilter, dayFilter, applyFilterToData]);
+  }, [allSubjects, selectedFilter, dayFilter, searchQuery, applyFilterToData]);
 
   const goCreate = () => router.push("/(tabs)/subjects/create" as Href);
 
@@ -218,18 +241,21 @@ export default function SubjectsScreen() {
     router.push("/alarms" as Href);
   };
 
-  const handleFilter = useCallback((filterKey: FilterKey, dayValue?: number | null) => {
-    const normalizedDay =
-      filterKey === "dia" && typeof dayValue === "number" ? dayValue : null;
+  const handleFilter = useCallback(
+    (filterKey: FilterKey, dayValue?: number | null) => {
+      const normalizedDay =
+        filterKey === "dia" && typeof dayValue === "number" ? dayValue : null;
 
-    if (filterKey === "dia" && normalizedDay === null) {
-      return;
-    }
+      if (filterKey === "dia" && normalizedDay === null) {
+        return;
+      }
 
-    const appliedFilter = filterKey === "dia" ? "dia" : filterKey;
-    setSelectedFilter(appliedFilter);
-    setDayFilter(appliedFilter === "dia" ? normalizedDay : null);
-  }, []);
+      const appliedFilter = filterKey === "dia" ? "dia" : filterKey;
+      setSelectedFilter(appliedFilter);
+      setDayFilter(appliedFilter === "dia" ? normalizedDay : null);
+    },
+    []
+  );
 
   const handleDaySelection = useCallback(
     (dayValue: number | null) => {
@@ -243,6 +269,11 @@ export default function SubjectsScreen() {
     },
     [handleFilter]
   );
+
+  // Limpiar búsqueda
+  const clearSearch = () => {
+    setSearchQuery("");
+  };
 
   return (
     <SafeAreaView style={styles.safe}>
@@ -266,7 +297,6 @@ export default function SubjectsScreen() {
               <Text style={styles.createBtnText}>+ Crear</Text>
             </Pressable>
 
-            {/* botón filtros */}
             <Pressable
               onPress={() => setFilterModalVisible(true)}
               style={({ pressed }) => [
@@ -274,7 +304,11 @@ export default function SubjectsScreen() {
                 pressed && { opacity: 0.85 },
               ]}
             >
-              <MaterialCommunityIcons name="filter-variant" size={20} color="#fff" />
+              <MaterialCommunityIcons
+                name="filter-variant"
+                size={20}
+                color="#fff"
+              />
             </Pressable>
 
             <Pressable
@@ -289,6 +323,36 @@ export default function SubjectsScreen() {
           </View>
         </View>
 
+        {/* Barra de búsqueda */}
+        <View style={styles.searchContainer}>
+          <View style={styles.searchBox}>
+            <MaterialCommunityIcons
+              name="magnify"
+              size={20}
+              color="rgba(0,0,0,0.5)"
+              style={styles.searchIcon}
+            />
+            <TextInput
+              style={styles.searchInput}
+              placeholder="Buscar por nombre..."
+              placeholderTextColor="rgba(0,0,0,0.4)"
+              value={searchQuery}
+              onChangeText={setSearchQuery}
+              autoCapitalize="none"
+              autoCorrect={false}
+            />
+            {searchQuery.length > 0 && (
+              <Pressable onPress={clearSearch} style={styles.clearBtn}>
+                <MaterialCommunityIcons
+                  name="close-circle"
+                  size={18}
+                  color="rgba(0,0,0,0.5)"
+                />
+              </Pressable>
+            )}
+          </View>
+        </View>
+
         {loading ? (
           <View style={styles.emptyBody}>
             <Text style={styles.emptyText}>Cargando...</Text>
@@ -296,17 +360,24 @@ export default function SubjectsScreen() {
         ) : subjects.length === 0 ? (
           <View style={styles.emptyBody}>
             <Ionicons name="book-outline" size={64} color="rgba(0,0,0,0.3)" />
-            <Text style={styles.emptyText}>No hay materias creadas</Text>
-            <Text style={styles.emptySubtext}>
-              Toca "+ Crear" para agregar tu primera materia
+            <Text style={styles.emptyText}>
+              {searchQuery.trim()
+                ? `No se encontraron materias con "${searchQuery}"`
+                : "No hay materias creadas"}
             </Text>
+            {!searchQuery.trim() && (
+              <Text style={styles.emptySubtext}>
+                Toca "+ Crear" para agregar tu primera materia
+              </Text>
+            )}
           </View>
         ) : (
           <FlatList
             contentContainerStyle={{ padding: 12, paddingBottom: 20 }}
             data={subjects}
             keyExtractor={(item) =>
-              (item.subject.subjectId || item.subject.subject_id)?.toString() || ""
+              (item.subject.subjectId || item.subject.subject_id)?.toString() ||
+              ""
             }
             renderItem={({ item }) => (
               <SubjectCard item={item} onDeleted={loadSubjects} />
@@ -425,12 +496,15 @@ export default function SubjectsScreen() {
               <MaterialCommunityIcons
                 name="clock-outline"
                 size={22}
-                color={selectedFilter === "recientes" ? COLORS.header : COLORS.text}
+                color={
+                  selectedFilter === "recientes" ? COLORS.header : COLORS.text
+                }
               />
               <Text
                 style={[
                   styles.filterOptionText,
-                  selectedFilter === "recientes" && styles.filterOptionTextActive,
+                  selectedFilter === "recientes" &&
+                    styles.filterOptionTextActive,
                 ]}
               >
                 Más recientes
@@ -459,7 +533,10 @@ export default function SubjectsScreen() {
                 ]}
               >
                 {dayFilter !== null
-                  ? `Por día (${DAY_OPTIONS.find((d) => d.value === dayFilter)?.label ?? ""})`
+                  ? `Por día (${
+                      DAY_OPTIONS.find((d) => d.value === dayFilter)?.label ??
+                      ""
+                    })`
                   : "Por día"}
               </Text>
             </Pressable>
@@ -492,12 +569,15 @@ export default function SubjectsScreen() {
                 <MaterialCommunityIcons
                   name="calendar-check"
                   size={22}
-                  color={dayFilter === option.value ? COLORS.header : COLORS.text}
+                  color={
+                    dayFilter === option.value ? COLORS.header : COLORS.text
+                  }
                 />
                 <Text
                   style={[
                     styles.filterOptionText,
-                    dayFilter === option.value && styles.filterOptionTextActive,
+                    dayFilter === option.value &&
+                      styles.filterOptionTextActive,
                   ]}
                 >
                   {option.label}
@@ -627,7 +707,9 @@ function SubjectCard({
 
   const subtitle =
     item.schedules && item.schedules.length > 0
-      ? `${item.schedules.length} horario${item.schedules.length !== 1 ? "s" : ""}`
+      ? `${item.schedules.length} horario${
+          item.schedules.length !== 1 ? "s" : ""
+        }`
       : undefined;
 
   const iconKey = item.subject.icon || "book";
@@ -646,7 +728,11 @@ function SubjectCard({
         ]}
         onPress={confirmDelete}
       >
-        <MaterialCommunityIcons name="trash-can-outline" size={18} color="#fff" />
+        <MaterialCommunityIcons
+          name="trash-can-outline"
+          size={18}
+          color="#fff"
+        />
       </Pressable>
 
       <Pressable
@@ -657,7 +743,11 @@ function SubjectCard({
         ]}
         onPress={cancelDelete}
       >
-        <MaterialCommunityIcons name="close-circle-outline" size={18} color="#fff" />
+        <MaterialCommunityIcons
+          name="close-circle-outline"
+          size={18}
+          color="#fff"
+        />
       </Pressable>
     </>
   ) : (
@@ -667,7 +757,11 @@ function SubjectCard({
         style={subjectCardStyles.actionBtn}
         onPress={openPomodoroConfig}
       >
-        <MaterialCommunityIcons name="timer-plus-outline" size={18} color="#fff" />
+        <MaterialCommunityIcons
+          name="timer-plus-outline"
+          size={18}
+          color="#fff"
+        />
       </Pressable>
 
       <Pressable
@@ -752,6 +846,33 @@ const styles = StyleSheet.create({
     fontSize: 14,
     marginTop: 8,
     textAlign: "center",
+  },
+
+  // Estilos para búsqueda
+  searchContainer: {
+    backgroundColor: COLORS.header,
+    paddingHorizontal: 16,
+    paddingBottom: 12,
+  },
+  searchBox: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#fff",
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+  },
+  searchIcon: {
+    marginRight: 8,
+  },
+  searchInput: {
+    flex: 1,
+    fontSize: 14,
+    color: COLORS.text,
+    padding: 0,
+  },
+  clearBtn: {
+    padding: 4,
   },
 
   // FILTER STYLES
