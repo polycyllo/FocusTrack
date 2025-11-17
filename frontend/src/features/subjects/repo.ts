@@ -1,6 +1,7 @@
 import { db } from "../../db/db";
 import { subject } from "../../db/schemas/Subject";
 import { schedule } from "../../db/schemas/Schedule";
+import { task } from "../../db/schemas/Task";
 import { eq, desc } from "drizzle-orm";
 
 export type CreateSubjectInput = {
@@ -89,12 +90,16 @@ export async function printAllSubjectsWithSchedules() {
   console.log('--- end dump ---')
 }
 
-//eliminar materia y horario
+//eliminar materia, horarios y tareas asociadas
 export async function deleteSubjectWithSchedules(subjectId: number) {
+  // Eliminar tareas asociadas a la materia
+  await db.delete(task).where(eq(task.subjectId, subjectId));
+  // Eliminar horarios asociados a la materia
   await db.delete(schedule).where(eq(schedule.subjectId, subjectId));
+  // Eliminar la materia
   await db.delete(subject).where(eq(subject.subjectId, subjectId));
 
-  console.log(`Materia con ID ${subjectId} y sus horarios fueron eliminados.`);
+  console.log(`Materia con ID ${subjectId}, sus horarios y tareas fueron eliminados.`);
 }
 
 //editar materia 
