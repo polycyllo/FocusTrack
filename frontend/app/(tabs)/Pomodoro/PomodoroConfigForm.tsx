@@ -9,7 +9,7 @@ import {
 } from "react-native";
 import Slider from "@react-native-community/slider";
 import { useRouter, Href, useLocalSearchParams } from "expo-router";
-import { Ionicons } from "@expo/vector-icons";
+import { ArrowBackButton } from "@/components/ArrowBackButton";
 
 import { usePomodoroStore } from "@/src/store/pomodoro.store";
 
@@ -92,9 +92,11 @@ export default function PomodoroConfigForm() {
       <View style={styles.container}>
         {/* Header */}
         <View style={styles.header}>
-          <Pressable style={styles.backBtn} onPress={handleBack}>
-            <Ionicons name="chevron-back" size={22} color="#fff" />
-          </Pressable>
+          <ArrowBackButton
+            onPress={handleBack}
+            hitSlop={8}
+            style={styles.backBtn}
+          />
           <Text style={styles.headerTitle} numberOfLines={1}>
             Configuración Pomodoro
           </Text>

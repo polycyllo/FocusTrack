@@ -9,10 +9,10 @@ import {
   TextInput,
   View,
 } from "react-native";
-import { Ionicons } from "@expo/vector-icons";
 import { useLocalSearchParams, useRouter } from "expo-router";
 
 import { ColorIconPicker } from "@/components/forms/ColorIconPicker";
+import { ArrowBackButton } from "@/components/ArrowBackButton";
 import {
   FORM_THEME,
   FORM_COLOR_SWATCHES,
@@ -35,6 +35,16 @@ export default function TaskCreateScreen() {
   const [icon, setIcon] = useState(FORM_ICON_OPTIONS[0].key);
   const [saving, setSaving] = useState(false);
   const subjectId = subjectIdParam ? Number(subjectIdParam) : null;
+
+  const goBackToTasks = () => {
+    router.replace({
+      pathname: "/(tabs)/tasks" as any,
+      params: {
+        subjectId: subjectIdParam,
+        subjectTitle: subjectTitle ?? "",
+      },
+    });
+  };
 
   const onSave = async () => {
     if (!subjectId) {
@@ -69,13 +79,7 @@ export default function TaskCreateScreen() {
       setColor(FORM_COLOR_SWATCHES[0]);
       setIcon(FORM_ICON_OPTIONS[0].key);
 
-      router.replace({
-        pathname: "/(tabs)/tasks" as any,
-        params: {
-          subjectId: subjectIdParam,
-          subjectTitle: subjectTitle ?? "",
-        },
-      });
+      goBackToTasks();
     } catch (error) {
       console.error("Error guardando tarea:", error);
       Alert.alert("Error", "No se pudo guardar la tarea. Intenta de nuevo.");
@@ -87,9 +91,11 @@ export default function TaskCreateScreen() {
   return (
     <SafeAreaView style={styles.safe}>
       <View style={styles.header}>
-        <Pressable style={styles.backBtn} onPress={() => router.back()}>
-          <Ionicons name="chevron-back" size={22} color="#fff" />
-        </Pressable>
+        <ArrowBackButton
+          hitSlop={8}
+          style={styles.backBtn}
+          onPress={goBackToTasks}
+        />
         <Text style={styles.headerTitle}>
           Crear Tarea{subjectTitle ? ` - ${subjectTitle}` : ""}
         </Text>
@@ -128,15 +134,7 @@ export default function TaskCreateScreen() {
         <View style={styles.footerBtns}>
           <Pressable
             style={[styles.btn, styles.btnCancel]}
-            onPress={() =>
-              router.replace({
-                pathname: "/(tabs)/tasks" as any,
-                params: {
-                  subjectId: subjectIdParam,
-                  subjectTitle: subjectTitle ?? "",
-                },
-              })
-            }
+            onPress={goBackToTasks}
             disabled={saving}
           >
             <Text style={styles.btnText}>Cancelar</Text>
