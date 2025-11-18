@@ -79,29 +79,6 @@ export default function RootLayout() {
       // Inicializar esquema de base de datos
       ensureSchema();
 
-      // Crear usuario de prueba "Pepito" si no existe
-      const pepitoEmail = "pepito@gmail.com";
-      const existing = await db
-        .select()
-        .from(student)
-        .where(eq(student.email, pepitoEmail))
-        .limit(1);
-
-      if (existing.length === 0) {
-        await db.insert(student).values({
-          name: "Pepito",
-          email: pepitoEmail,
-          password: "123456",
-        });
-        console.log("✅ Pepito creado");
-      } else {
-        console.log("ℹ️ Pepito ya existía, no se vuelve a crear");
-      }
-
-      // Mostrar estudiantes en la consola
-      const result = await db.select().from(student);
-      console.log("📂 Students en DB:", result);
-
       await SplashScreen.hideAsync();
     })();
   }, [loaded]);
