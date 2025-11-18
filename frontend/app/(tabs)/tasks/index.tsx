@@ -8,6 +8,7 @@ import {
   SafeAreaView,
   FlatList,
   Text,
+  TextInput,
 } from "react-native";
 import { useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
@@ -100,6 +101,9 @@ export default function TasksListScreen() {
   const [loading, setLoading] = useState(true);
   const [filterModalVisible, setFilterModalVisible] = useState(false);
   const [selectedFilter, setSelectedFilter] = useState<TaskFilterKey>("todos");
+  
+  // Estado para búsqueda
+  const [searchQuery, setSearchQuery] = useState("");
 
   const headerTitle = useMemo(() => {
     const fullTitle = subjectTitle ? `Tareas - ${subjectTitle}` : "Tareas";
@@ -132,11 +136,22 @@ export default function TasksListScreen() {
   );
 
   const applyFilterToTasks = useCallback(
-    (rows: TaskRow[], filterKey: TaskFilterKey) => {
+    (rows: TaskRow[], filterKey: TaskFilterKey, search: string) => {
       if (!rows.length) return [];
 
-      const pending = rows.filter((task) => task.status !== 1);
-      const completed = rows.filter((task) => task.status === 1);
+      let pending = rows.filter((task) => task.status !== 1);
+      let completed = rows.filter((task) => task.status === 1);
+
+      // Aplicar búsqueda
+      if (search.trim()) {
+        const searchLower = search.toLowerCase().trim();
+        pending = pending.filter((task) =>
+          task.title.toLowerCase().includes(searchLower)
+        );
+        completed = completed.filter((task) =>
+          task.title.toLowerCase().includes(searchLower)
+        );
+      }
 
       const sortByRecentPending = (list: TaskRow[]) =>
         [...list].sort((a, b) => getCreatedTimestamp(b) - getCreatedTimestamp(a));
@@ -172,8 +187,8 @@ export default function TasksListScreen() {
   );
 
   useEffect(() => {
-    setTasks(applyFilterToTasks(rawTasks, selectedFilter));
-  }, [rawTasks, selectedFilter, applyFilterToTasks]);
+    setTasks(applyFilterToTasks(rawTasks, selectedFilter, searchQuery));
+  }, [rawTasks, selectedFilter, searchQuery, applyFilterToTasks]);
 
   const goCreate = () => {
     if (!subjectIdParam) {
@@ -224,7 +239,14 @@ export default function TasksListScreen() {
     }
   };
 
-  const emptyMessage = subjectTitle
+  // Limpiar búsqueda
+  const clearSearch = () => {
+    setSearchQuery("");
+  };
+
+  const emptyMessage = searchQuery.trim()
+    ? `No se encontraron tareas con "${searchQuery}"`
+    : subjectTitle
     ? `No hay tareas para "${subjectTitle}".`
     : "Selecciona una materia para ver sus tareas.";
 
@@ -267,6 +289,36 @@ export default function TasksListScreen() {
             >
               <Text style={styles.createBtnText}>+ Crear</Text>
             </Pressable>
+          </View>
+        </View>
+
+        {/* Barra de búsqueda */}
+        <View style={styles.searchContainer}>
+          <View style={styles.searchBox}>
+            <MaterialCommunityIcons
+              name="magnify"
+              size={20}
+              color="rgba(0,0,0,0.5)"
+              style={styles.searchIcon}
+            />
+            <TextInput
+              style={styles.searchInput}
+              placeholder="Buscar por nombre..."
+              placeholderTextColor="rgba(0,0,0,0.4)"
+              value={searchQuery}
+              onChangeText={setSearchQuery}
+              autoCapitalize="none"
+              autoCorrect={false}
+            />
+            {searchQuery.length > 0 && (
+              <Pressable onPress={clearSearch} style={styles.clearBtn}>
+                <MaterialCommunityIcons
+                  name="close-circle"
+                  size={18}
+                  color="rgba(0,0,0,0.5)"
+                />
+              </Pressable>
+            )}
           </View>
         </View>
       </View>
@@ -578,6 +630,34 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     fontSize: 12,
   },
+
+  // Estilos para búsqueda
+  searchContainer: {
+    backgroundColor: SCREEN_COLORS.header,
+    paddingHorizontal: 16,
+    paddingBottom: 12,
+  },
+  searchBox: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#fff",
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+  },
+  searchIcon: {
+    marginRight: 8,
+  },
+  searchInput: {
+    flex: 1,
+    fontSize: 14,
+    color: "#0A0A0A",
+    padding: 0,
+  },
+  clearBtn: {
+    padding: 4,
+  },
+
   container: {
     flex: 1,
     backgroundColor: SCREEN_COLORS.background,

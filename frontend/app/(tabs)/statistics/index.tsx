@@ -1,10 +1,47 @@
 import React from "react";
-import { View, Text, StyleSheet, ScrollView, Pressable, ActivityIndicator } from "react-native";
+import {
+  View,
+  Text,
+  StyleSheet,
+  ScrollView,
+  Pressable,
+  ActivityIndicator,
+} from "react-native";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { useStatisticsStore } from "../../../src/store/statistics.store";
 import { formatPomodoroTime } from "../../../src/utils/timeFormatter";
 import { useRouter } from "expo-router";
 import { useFocusEffect } from "@react-navigation/native";
+
+function formatSecondsToTime(totalSeconds: number) {
+  const SECONDS_PER_DAY = 86400;
+  const SECONDS_PER_HOUR = 3600;
+  const SECONDS_PER_MINUTE = 60;
+
+  const days = Math.floor(totalSeconds / SECONDS_PER_DAY);
+  const remainingSecondsAfterDays = totalSeconds % SECONDS_PER_DAY;
+
+  const hours = Math.floor(remainingSecondsAfterDays / SECONDS_PER_HOUR);
+  const remainingSecondsAfterHours =
+    remainingSecondsAfterDays % SECONDS_PER_HOUR;
+
+  const minutes = Math.floor(remainingSecondsAfterHours / SECONDS_PER_MINUTE);
+
+  const seconds = remainingSecondsAfterHours % SECONDS_PER_MINUTE;
+
+  const daysStr = `${String(days)}d`;
+  const hoursStr = `${String(hours).padStart(2, "0")}h`;
+  const minutesStr = `${String(minutes).padStart(2, "0")}m`;
+  const secondsStr = `${String(seconds).padStart(2, "0")}s`;
+
+  if (days > 0) {
+    return `${daysStr} ${hoursStr} ${minutesStr} ${secondsStr}`;
+  } else if (hours > 0) {
+    return `${hoursStr} ${minutesStr} ${secondsStr}`;
+  } else {
+    return `${minutesStr} ${secondsStr}`;
+  }
+}
 
 const COLORS = {
   bg: "#D4F3EE",
@@ -16,6 +53,7 @@ const COLORS = {
 };
 
 export default function StatisticsScreen() {
+  const totalFocusSeconds = useStatisticsStore((s) => s.totalFocusSeconds);
   const stats = useStatisticsStore();
   const router = useRouter();
 
@@ -79,8 +117,15 @@ export default function StatisticsScreen() {
             <View style={styles.section}>
               <Text style={styles.sectionTitle}>Progreso de Tareas</Text>
               {statCards.map((s, i) => (
-                <View key={i} style={[styles.card, { borderLeftColor: s.color }]}>
-                  <MaterialCommunityIcons name={s.icon} size={30} color={s.color} />
+                <View
+                  key={i}
+                  style={[styles.card, { borderLeftColor: s.color }]}
+                >
+                  <MaterialCommunityIcons
+                    name={s.icon}
+                    size={30}
+                    color={s.color}
+                  />
                   <View style={styles.cardTextBox}>
                     <Text style={styles.cardLabel}>{s.label}</Text>
                     <Text style={styles.cardValue}>{s.value}</Text>
@@ -101,7 +146,7 @@ export default function StatisticsScreen() {
                 <View style={styles.cardTextBox}>
                   <Text style={styles.cardLabel}>Pomodoro General</Text>
                   <Text style={styles.cardValue}>
-                    {formatPomodoroTime(stats.pomodoroMinutesTotal)}
+                    {formatSecondsToTime(totalFocusSeconds)}
                   </Text>
                 </View>
               </View>
