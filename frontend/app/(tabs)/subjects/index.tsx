@@ -120,7 +120,7 @@ export default function SubjectsScreen() {
   const [selectedFilter, setSelectedFilter] = useState<FilterKey>("todos");
   const [dayFilter, setDayFilter] = useState<number | null>(null);
   const [dayPickerVisible, setDayPickerVisible] = useState(false);
-  
+
   // Estado para búsqueda
   const [searchQuery, setSearchQuery] = useState("");
 
@@ -159,7 +159,9 @@ export default function SubjectsScreen() {
           if (typeof dayValue !== "number") return list;
           return list
             .filter((item) =>
-              (item.schedules ?? []).some((schedule) => schedule.day === dayValue)
+              (item.schedules ?? []).some(
+                (schedule) => schedule.day === dayValue
+              )
             )
             .sort((a, b) =>
               TITLE_COLLATOR.compare(getSubjectTitle(a), getSubjectTitle(b))
@@ -195,7 +197,7 @@ export default function SubjectsScreen() {
     }, [loadSubjects])
   );
 
-  // Aplicar filtros y búsqueda 
+  // Aplicar filtros y búsqueda
   useEffect(() => {
     const effectiveFilter =
       selectedFilter === "dia" && dayFilter === null ? "todos" : selectedFilter;
@@ -576,8 +578,7 @@ export default function SubjectsScreen() {
                 <Text
                   style={[
                     styles.filterOptionText,
-                    dayFilter === option.value &&
-                      styles.filterOptionTextActive,
+                    dayFilter === option.value && styles.filterOptionTextActive,
                   ]}
                 >
                   {option.label}
@@ -687,9 +688,13 @@ function SubjectCard({
   const openPomodoroConfig = () => {
     if (subjectIdValue) {
       setSubject(subjectIdValue.toString());
+
       router.push({
-        pathname: "/(tabs)/Pomodoro/PomodoroConfigForm" as Href,
-        params: { returnTo: "/(tabs)/subjects" },
+        pathname: "/(tabs)/Pomodoro/PomodoroConfigForm" as any,
+        params: {
+          returnTo: "/(tabs)/subjects",
+          subjectId: subjectIdValue.toString(),
+        },
       });
     }
   };
@@ -713,10 +718,8 @@ function SubjectCard({
       : undefined;
 
   const iconKey = item.subject.icon || "book";
-  const iconNode =
-    FORM_ICON_OPTIONS.find((opt) => opt.key === iconKey)?.node ?? (
-      <Ionicons name="book" size={18} color="#fff" />
-    );
+  const iconNode = FORM_ICON_OPTIONS.find((opt) => opt.key === iconKey)
+    ?.node ?? <Ionicons name="book" size={18} color="#fff" />;
 
   const actions = deleting ? (
     <>

@@ -17,17 +17,25 @@ export default function PomodoroConfigForm() {
   const router = useRouter();
   const params = useLocalSearchParams();
 
+  const session = usePomodoroStore((s) => s.session);
+
   const rawSubjectId = params.subjectId || params.id;
   const rawTaskId = params.taskId;
   const rawSubjectTitle = params.subjectTitle;
 
-  const targetSubjectId = Array.isArray(rawSubjectId)
+  const paramSubjectId = Array.isArray(rawSubjectId)
     ? rawSubjectId[0]
     : rawSubjectId;
-  const targetTaskId = Array.isArray(rawTaskId) ? rawTaskId[0] : rawTaskId;
-  const targetSubjectTitle = Array.isArray(rawSubjectTitle)
+  const paramTaskId = Array.isArray(rawTaskId) ? rawTaskId[0] : rawTaskId;
+  const paramSubjectTitle = Array.isArray(rawSubjectTitle)
     ? rawSubjectTitle[0]
     : rawSubjectTitle;
+
+  const targetSubjectId = paramSubjectId || session.subjectId;
+  const targetTaskId = paramTaskId || session.taskId;
+
+  const displayTitle =
+    paramSubjectTitle || (targetSubjectId ? "Materia" : null);
 
   const configKey = targetTaskId
     ? `task-${targetTaskId}`
@@ -51,8 +59,10 @@ export default function PomodoroConfigForm() {
   const startWithConfig = usePomodoroStore((s) => s.startWithConfig);
 
   useEffect(() => {
-    setContext(targetSubjectId || null, targetTaskId || null, configKey);
-  }, [targetSubjectId, targetTaskId, configKey]);
+    if (paramSubjectId || paramTaskId) {
+      setContext(paramSubjectId || null, paramTaskId || null, configKey);
+    }
+  }, [paramSubjectId, paramTaskId, configKey, setContext]);
 
   const [focusTime, setFocusTime] = useState(config.focusTime);
   const [shortBreak, setShortBreak] = useState(config.shortBreak);
@@ -96,6 +106,7 @@ export default function PomodoroConfigForm() {
 
     router.push("/(tabs)/Pomodoro/PomodoroScreen" as Href);
   };
+
   return (
     <SafeAreaView style={styles.safe}>
       <View style={styles.container}>
@@ -106,11 +117,10 @@ export default function PomodoroConfigForm() {
             style={styles.backBtn}
           />
           <Text style={styles.headerTitle} numberOfLines={1}>
-            {/* Título dinámico según si es Tarea o Materia */}
             {targetTaskId
               ? "Config: Tarea"
-              : targetSubjectTitle
-              ? `Config: ${targetSubjectTitle}`
+              : displayTitle
+              ? `Config: ${displayTitle}`
               : "Configuración Pomodoro"}
           </Text>
           <View style={styles.headerRightSpacer} />

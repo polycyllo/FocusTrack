@@ -20,10 +20,7 @@ import {
   subjectCardStyles,
 } from "@/components/cards/SubjectCardLayout";
 import { CompletedTaskCardLayout } from "@/components/cards/CompletedTaskCardLayout";
-import {
-  getTasksBySubject,
-  updateTaskStatus,
-} from "@/src/features/tasks/repo";
+import { getTasksBySubject, updateTaskStatus } from "@/src/features/tasks/repo";
 import { usePomodoroStore } from "@/src/store/pomodoro.store";
 import { FORM_ICON_OPTIONS } from "@/src/constants/formStyles";
 
@@ -45,7 +42,9 @@ const getTaskNumericId = (row: TaskRow) => row.taskId ?? row.task_id ?? 0;
 
 const parseDateToMs = (value?: string | null) => {
   if (!value) return 0;
-  const isoCandidate = value.includes("T") ? value : value.replace(" ", "T") + "Z";
+  const isoCandidate = value.includes("T")
+    ? value
+    : value.replace(" ", "T") + "Z";
   const time = Date.parse(isoCandidate);
   return Number.isNaN(time) ? 0 : time;
 };
@@ -54,7 +53,8 @@ const getCreatedTimestamp = (row: TaskRow) =>
   parseDateToMs(row.createdAt ?? row.created_at) || getTaskNumericId(row);
 
 const getCompletedTimestamp = (row: TaskRow) =>
-  parseDateToMs(row.completedAt ?? row.completed_at) || getCreatedTimestamp(row);
+  parseDateToMs(row.completedAt ?? row.completed_at) ||
+  getCreatedTimestamp(row);
 
 const SCREEN_COLORS = {
   background: "#9ECDF2",
@@ -86,9 +86,9 @@ export default function TasksListScreen() {
   const setSubject = usePomodoroStore((s) => s.setSubject);
   const router = useRouter();
   const params = useLocalSearchParams();
-  
-  const subjectIdParam = Array.isArray(params.subjectId) 
-    ? params.subjectId[0] 
+
+  const subjectIdParam = Array.isArray(params.subjectId)
+    ? params.subjectId[0]
     : params.subjectId;
   const subjectTitle = Array.isArray(params.subjectTitle)
     ? params.subjectTitle[0]
@@ -101,7 +101,7 @@ export default function TasksListScreen() {
   const [loading, setLoading] = useState(true);
   const [filterModalVisible, setFilterModalVisible] = useState(false);
   const [selectedFilter, setSelectedFilter] = useState<TaskFilterKey>("todos");
-  
+
   // Estado para búsqueda
   const [searchQuery, setSearchQuery] = useState("");
 
@@ -154,9 +154,13 @@ export default function TasksListScreen() {
       }
 
       const sortByRecentPending = (list: TaskRow[]) =>
-        [...list].sort((a, b) => getCreatedTimestamp(b) - getCreatedTimestamp(a));
+        [...list].sort(
+          (a, b) => getCreatedTimestamp(b) - getCreatedTimestamp(a)
+        );
       const sortByRecentCompleted = (list: TaskRow[]) =>
-        [...list].sort((a, b) => getCompletedTimestamp(b) - getCompletedTimestamp(a));
+        [...list].sort(
+          (a, b) => getCompletedTimestamp(b) - getCompletedTimestamp(a)
+        );
 
       let sortedPending: TaskRow[] = pending;
       let sortedCompleted: TaskRow[] = completed;
@@ -208,18 +212,18 @@ export default function TasksListScreen() {
     });
   };
 
-  const openPomodoro = () => {
+  const openPomodoro = (task: TaskRow) => {
     if (!subjectId) {
       Alert.alert("Materia requerida", "No se pudo identificar la materia.");
       return;
     }
-    setSubject(String(subjectId));
     router.push({
       pathname: "/(tabs)/Pomodoro/PomodoroConfigForm" as any,
       params: {
         returnTo: "/(tabs)/tasks",
         subjectId: subjectIdParam,
         subjectTitle: subjectTitle ?? "",
+        taskId: task.taskId ?? task.task_id,
       },
     });
   };
@@ -331,7 +335,11 @@ export default function TasksListScreen() {
           </View>
         ) : tasks.length === 0 ? (
           <View style={styles.emptyBody}>
-            <Ionicons name="checkbox-outline" size={64} color="rgba(0,0,0,0.3)" />
+            <Ionicons
+              name="checkbox-outline"
+              size={64}
+              color="rgba(0,0,0,0.3)"
+            />
             <Text style={styles.emptyText}>{emptyMessage}</Text>
           </View>
         ) : (
@@ -345,7 +353,7 @@ export default function TasksListScreen() {
               <TaskCard
                 item={item}
                 subjectTitle={subjectTitle ?? ""}
-                onOpenPomodoro={openPomodoro}
+                onOpenPomodoro={() => openPomodoro(item)}
                 onToggleStatus={toggleTaskStatus}
               />
             )}
@@ -483,7 +491,6 @@ export default function TasksListScreen() {
                 Más recientes
               </Text>
             </Pressable>
-
           </View>
         </Pressable>
       </Modal>
@@ -502,10 +509,8 @@ function TaskCard({
   onOpenPomodoro: () => void;
   onToggleStatus: (taskId: number, status?: number | null) => void;
 }) {
-  const iconNode =
-    FORM_ICON_OPTIONS.find((opt) => opt.key === item.icon)?.node ?? (
-      <Ionicons name="checkbox-outline" size={20} color="#fff" />
-    );
+  const iconNode = FORM_ICON_OPTIONS.find((opt) => opt.key === item.icon)
+    ?.node ?? <Ionicons name="checkbox-outline" size={20} color="#fff" />;
 
   const subtitle =
     item.description?.trim() ||

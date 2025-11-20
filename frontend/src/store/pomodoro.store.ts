@@ -109,7 +109,7 @@ export const usePomodoroStore = create<PomodoroState>()(
 
           if (configKey && currentSaved[configKey]) {
             targetConfig = currentSaved[configKey];
-          } else if (subjectId && currentSaved[subjectId]) {
+          } else if (!taskId && subjectId && currentSaved[subjectId]) {
             targetConfig = currentSaved[subjectId];
           }
 
