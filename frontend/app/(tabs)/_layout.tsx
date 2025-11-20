@@ -3,10 +3,10 @@ import FontAwesome from "@expo/vector-icons/FontAwesome";
 import { Tabs, Link } from "expo-router";
 import { Pressable } from "react-native";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
+import { SafeAreaView } from "react-native-safe-area-context";
 
 import Colors from "@/constants/Colors";
 import { useColorScheme } from "@/components/useColorScheme";
-import { useClientOnlyValue } from "@/components/useClientOnlyValue";
 import { AlarmsProvider } from "@/src/store/alarm.store";
 
 function TabBarIcon(props: {
@@ -21,79 +21,81 @@ export default function TabLayout() {
 
   return (
     <AlarmsProvider>
-      <Tabs
-        screenOptions={{
-          tabBarActiveTintColor: Colors[colorScheme ?? "light"].tint,
-          headerShown: useClientOnlyValue(false, true),
-          tabBarStyle: { display: "none" }, //Uncomment to hide tab bar
-      }}
-      >
-        <Tabs.Screen
-          name="index"
-          options={{
-            title: "Tab One",
-            tabBarIcon: ({ color }) => <TabBarIcon name="code" color={color} />,
-            headerRight: () => (
-              <Link href="/modal" asChild>
-                <Pressable>
-                  {({ pressed }) => (
-                    <FontAwesome
-                      name="info-circle"
-                      size={25}
-                      color={Colors[colorScheme ?? "light"].text}
-                      style={{ marginRight: 15, opacity: pressed ? 0.5 : 1 }}
-                    />
-                  )}
-                </Pressable>
-              </Link>
-            ),
-          }}
-        />
-        <Tabs.Screen
-          name="two"
-          options={{
-            title: "Tab Two",
-            tabBarIcon: ({ color }) => <TabBarIcon name="code" color={color} />,
-          }}
-        />
-        <Tabs.Screen
-          name="Pomodoro/index"
-          options={{ 
-            title: "Pomodoro", 
+      <SafeAreaView style={{ flex: 1 }} edges={["top", "left", "right"]}>
+        <Tabs
+          screenOptions={{
+            tabBarActiveTintColor: Colors[colorScheme ?? "light"].tint,
             headerShown: false,
-            tabBarIcon: ({ color, size }) => (
-              <MaterialCommunityIcons name="timer" size={size} color={color} />
-            ),
+            tabBarStyle: { display: "none" }, //Uncomment to hide tab bar
           }}
-        />
-        <Tabs.Screen
-          name="alarms"
-          options={{
-            title: "Alarmas",
-            tabBarIcon: ({ color, size }) => (
-              <MaterialCommunityIcons name="bell" size={size} color={color} />
-            ),
-          }}
-        />
-        <Tabs.Screen
-          name="subjects/index"
-          options={{
-            title: "Materias",
-            tabBarIcon: ({ color, size }) => (
-              <MaterialCommunityIcons name="book" size={size} color={color} />
-            ),
-          }}
-        />
-        <Tabs.Screen
-          name="tasks/index"
-          options={{
-            title: "Tareas",
-            tabBarIcon: ({ color, size }) => (
-              <MaterialCommunityIcons name="checkbox-marked" size={size} color={color} />
-            ),
-          }}
-        />
-      </Tabs>
+        >
+          <Tabs.Screen
+            name="index"
+            options={{
+              title: "Tab One",
+              tabBarIcon: ({ color }) => <TabBarIcon name="code" color={color} />,
+              headerRight: () => (
+                <Link href="/modal" asChild>
+                  <Pressable>
+                    {({ pressed }) => (
+                      <FontAwesome
+                        name="info-circle"
+                        size={25}
+                        color={Colors[colorScheme ?? "light"].text}
+                        style={{ marginRight: 15, opacity: pressed ? 0.5 : 1 }}
+                      />
+                    )}
+                  </Pressable>
+                </Link>
+              ),
+            }}
+          />
+          <Tabs.Screen
+            name="two"
+            options={{
+              title: "Tab Two",
+              tabBarIcon: ({ color }) => <TabBarIcon name="code" color={color} />,
+            }}
+          />
+          <Tabs.Screen
+            name="Pomodoro/index"
+            options={{
+              title: "Pomodoro",
+              tabBarIcon: ({ color, size }) => (
+                <MaterialCommunityIcons name="timer" size={size} color={color} />
+              ),
+            }}
+          />
+          <Tabs.Screen
+            name="alarms"
+            options={{
+              title: "Alarmas",
+              headerShown: false,
+              tabBarIcon: ({ color, size }) => (
+                <MaterialCommunityIcons name="bell" size={size} color={color} />
+              ),
+            }}
+          />
+          <Tabs.Screen
+            name="subjects/index"
+            options={{
+              title: "Materias",
+              tabBarIcon: ({ color, size }) => (
+                <MaterialCommunityIcons name="book" size={size} color={color} />
+              ),
+            }}
+          />
+          <Tabs.Screen
+            name="tasks/index"
+            options={{
+              title: "Tareas",
+              tabBarIcon: ({ color, size }) => (
+                <MaterialCommunityIcons name="checkbox-marked" size={size} color={color} />
+              ),
+            }}
+          />
+        </Tabs>
+      </SafeAreaView>
     </AlarmsProvider>
   );
 }

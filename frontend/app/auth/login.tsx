@@ -4,7 +4,6 @@ import {
   Text,
   StyleSheet,
   Pressable,
-  SafeAreaView,
   TextInput,
   Alert,
   ScrollView,
@@ -13,6 +12,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useAuthStore } from '@/src/store/auth.store';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function LoginScreen() {
   const router = useRouter();
@@ -47,7 +47,7 @@ export default function LoginScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
       <ScrollView contentContainerStyle={styles.scrollContent}>
         {/* Header con botón de regreso */}
         <View style={styles.header}>
