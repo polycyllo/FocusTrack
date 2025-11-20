@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   View,
   Text,
@@ -15,37 +15,27 @@ import { usePomodoroStore } from "@/src/store/pomodoro.store";
 
 export default function PomodoroConfigForm() {
   const router = useRouter();
-  const {
-    returnTo,
-    subjectId: subjectIdParam,
-    subjectTitle: subjectTitleParam,
-  } = useLocalSearchParams<{
-    returnTo?: string;
-    subjectId?: string;
-    subjectTitle?: string;
-  }>();
+  const params = useLocalSearchParams();
 
-  const targetPath = Array.isArray(returnTo) ? returnTo[0] : returnTo;
-  const targetSubjectId = Array.isArray(subjectIdParam)
-    ? subjectIdParam[0]
-    : subjectIdParam;
-  const targetSubjectTitle = Array.isArray(subjectTitleParam)
-    ? subjectTitleParam[0]
-    : subjectTitleParam;
+  const rawSubjectId = params.subjectId || params.id;
+  const rawTaskId = params.taskId;
+  const rawSubjectTitle = params.subjectTitle;
+
+  const targetSubjectId = Array.isArray(rawSubjectId)
+    ? rawSubjectId[0]
+    : rawSubjectId;
+  const targetTaskId = Array.isArray(rawTaskId) ? rawTaskId[0] : rawTaskId;
+  const targetSubjectTitle = Array.isArray(rawSubjectTitle)
+    ? rawSubjectTitle[0]
+    : rawSubjectTitle;
+
+  const configKey = targetTaskId
+    ? `task-${targetTaskId}`
+    : targetSubjectId
+    ? `subject-${targetSubjectId}`
+    : null;
 
   const handleBack = () => {
-    if (targetPath) {
-      const params: Record<string, string> = {};
-      if (targetSubjectId) params.subjectId = targetSubjectId;
-      if (targetSubjectTitle) params.subjectTitle = targetSubjectTitle;
-
-      router.replace({
-        pathname: targetPath as any,
-        params: Object.keys(params).length ? params : undefined,
-      } as any);
-      return;
-    }
-
     if (router.canGoBack()) {
       router.back();
     } else {
@@ -55,12 +45,26 @@ export default function PomodoroConfigForm() {
 
   const config = usePomodoroStore((s) => s.config);
   const setConfig = usePomodoroStore((s) => s.setConfig);
+
+  const saveConfigByKey = usePomodoroStore((s) => s.saveConfigByKey);
+  const setContext = usePomodoroStore((s) => s.setContext);
   const startWithConfig = usePomodoroStore((s) => s.startWithConfig);
+
+  useEffect(() => {
+    setContext(targetSubjectId || null, targetTaskId || null, configKey);
+  }, [targetSubjectId, targetTaskId, configKey]);
 
   const [focusTime, setFocusTime] = useState(config.focusTime);
   const [shortBreak, setShortBreak] = useState(config.shortBreak);
   const [longBreak, setLongBreak] = useState(config.longBreak);
   const [cycles, setCycles] = useState(config.cycles);
+
+  useEffect(() => {
+    setFocusTime(config.focusTime);
+    setShortBreak(config.shortBreak);
+    setLongBreak(config.longBreak);
+    setCycles(config.cycles);
+  }, [config]);
 
   const validate = () => {
     if (focusTime < 1 || focusTime > 60)
@@ -81,16 +85,20 @@ export default function PomodoroConfigForm() {
     }
 
     const next = { focusTime, shortBreak, longBreak, cycles };
-    setConfig(next);
-    startWithConfig(next);
+
+    if (configKey) {
+      saveConfigByKey(configKey, next);
+      startWithConfig(next);
+    } else {
+      setConfig(next);
+      startWithConfig(next);
+    }
 
     router.push("/(tabs)/Pomodoro/PomodoroScreen" as Href);
   };
-
   return (
     <SafeAreaView style={styles.safe}>
       <View style={styles.container}>
-        {/* Header */}
         <View style={styles.header}>
           <ArrowBackButton
             onPress={handleBack}
@@ -98,12 +106,16 @@ export default function PomodoroConfigForm() {
             style={styles.backBtn}
           />
           <Text style={styles.headerTitle} numberOfLines={1}>
-            Configuración Pomodoro
+            {/* Título dinámico según si es Tarea o Materia */}
+            {targetTaskId
+              ? "Config: Tarea"
+              : targetSubjectTitle
+              ? `Config: ${targetSubjectTitle}`
+              : "Configuración Pomodoro"}
           </Text>
           <View style={styles.headerRightSpacer} />
         </View>
 
-        {/* Body */}
         <View style={styles.body}>
           <Text style={styles.label}>Focus Time: {focusTime} min</Text>
           <Slider
@@ -153,15 +165,8 @@ export default function PomodoroConfigForm() {
             maximumTrackTintColor="#b0bec5"
           />
 
-          {/* Botón */}
           <View style={styles.button}>
-            <Pressable
-              onPress={startPomodoro}
-              style={({ pressed }) => [
-                styles.customBtn,
-                pressed && { opacity: 0.85 },
-              ]}
-            >
+            <Pressable onPress={startPomodoro} style={styles.customBtn}>
               <Text style={styles.customBtnText}>Comenzar Pomodoro</Text>
             </Pressable>
           </View>
@@ -188,10 +193,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "space-between",
   },
-  backBtn: {
-    padding: 4,
-    borderRadius: 8,
-  },
+  backBtn: { padding: 4, borderRadius: 8 },
   headerTitle: {
     color: "#ffffff",
     fontSize: 18,
@@ -199,9 +201,7 @@ const styles = StyleSheet.create({
     flex: 1,
     textAlign: "center",
   },
-  headerRightSpacer: {
-    width: 22,
-  },
+  headerRightSpacer: { width: 22 },
   body: { flex: 1, padding: 20, justifyContent: "space-between" },
   label: { fontSize: 16, marginTop: 15, color: "#0d47a1" },
   slider: { width: "100%", height: 40 },

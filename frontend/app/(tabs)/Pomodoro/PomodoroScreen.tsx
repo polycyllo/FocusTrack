@@ -41,12 +41,23 @@ export default function PomodoroScreen() {
   const router = useRouter();
   const [showCompletionOverlay, setShowCompletionOverlay] = useState(false);
 
+  const session = usePomodoroStore((s) => s.session);
+
   const handleGoBack = useCallback(() => {
     setShowCompletionOverlay(false);
-    router.replace("/(tabs)/Pomodoro/PomodoroConfigForm" as Href);
-  }, [router]);
 
-  const session = usePomodoroStore((s) => s.session);
+    const params: any = {};
+    // Si venimos de una tarea, volvemos pasando el taskId
+    if (session.taskId) params.taskId = session.taskId;
+    // Si venimos de una materia, pasamos el subjectId
+    if (session.subjectId) params.subjectId = session.subjectId;
+
+    router.replace({
+      pathname: "/(tabs)/Pomodoro/PomodoroConfigForm",
+      params,
+    } as any);
+  }, [router, session.subjectId, session.taskId]);
+
   const config = usePomodoroStore((s) => s.config);
   const cyclesPerRun = config.cycles || 1;
   const pause = usePomodoroStore((s) => s.pause);
