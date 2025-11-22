@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   View,
   Text,
@@ -8,10 +8,10 @@ import {
   Platform,
   UIManager,
   FlatList,
-  ScrollView,
 } from "react-native";
 import { useRouter } from "expo-router";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { useAlarms } from "../../src/store/alarm.store";
 import { Alarm } from "../../src/types/alarms";
 import {
@@ -155,7 +155,10 @@ export default function AlarmHome() {
   );
 
   return (
-    <>
+    <SafeAreaView
+      style={{ flex: 1, backgroundColor: COLORS.bg }}
+      edges={["top", "left", "right"]}
+    >
       {renderHeaderBar()}
       <FlatList
         data={SECTIONS}
@@ -245,7 +248,7 @@ export default function AlarmHome() {
           </View>
         }
       />
-    </>
+    </SafeAreaView>
   );
 }
 
